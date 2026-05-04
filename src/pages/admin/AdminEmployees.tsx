@@ -2,12 +2,12 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useProfiles, useCreateEmployee, useUpdateProfile, useDeleteEmployee, useDeleteMetadata } from "@/hooks/useProfiles";
 import { useTasks } from "@/hooks/useTasks";
-import { useRankings, useUpdateRankings, useVisibilitySettings, useUpdateVisibilitySettings, VisibilityMap } from "@/hooks/useSettings";
+import { useRankings, useUpdateRankings, useVisibilitySettings, useUpdateVisibilitySettings, VisibilityMap, Rankings } from "@/hooks/useSettings";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Search, Plus, Pencil, Trash2, Mail, Building2, Eye, Briefcase, Check, ChevronsUpDown, X, Filter, ListOrdered, ShieldCheck, Settings2 } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Mail, Building2, Eye, Briefcase, Check, ChevronsUpDown, X, Filter, ListOrdered, ShieldCheck, Settings2, LayoutGrid, Shield } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
@@ -98,6 +98,31 @@ function canSeeJobTitle(currentAdmin: any, target: any, visibility: VisibilityMa
   const mySettings = visibility[currentAdmin.department];
   if (!mySettings) return true;
   return mySettings.sees_jobs && mySettings.sees.includes(target.department);
+}
+
+function getVisibilitySettings(admin: any, visibility: VisibilityMap) {
+  if (!admin) return null;
+  const dept = admin.department || "";
+  const job = admin.job_title || "";
+  // Check specific Dept:JobTitle first
+  const specificKey = `${dept}:${job}`;
+  if (visibility[specificKey]) return visibility[specificKey];
+  // Fallback to general Department settings
+  return visibility[dept] || null;
+}
+
+function canAccessControlCenter(admin: any, visibility: VisibilityMap) {
+  if (!admin) return false;
+  if (admin.role === 'superadmin') return true;
+  const settings = getVisibilitySettings(admin, visibility);
+  return !!settings?.can_access_control;
+}
+
+function canEditControlCenter(admin: any, visibility: VisibilityMap) {
+  if (!admin) return false;
+  if (admin.role === 'superadmin') return true;
+  const settings = getVisibilitySettings(admin, visibility);
+  return !!settings?.can_edit_control;
 }
 
 
@@ -419,8 +444,8 @@ export default function AdminEmployees() {
             <button onClick={() => setView("table")} className={`px-2.5 py-1 text-xs rounded-md ${view === "table" ? "bg-background shadow-soft" : "text-muted-foreground"}`}>Table</button>
           </div>
 
-          {/* Ranking Settings (Admin Only) */}
-          {isAdmin && (
+          {/* Control Center Settings */}
+          {canAccessControlCenter(profile, visibility) && (
             <Button
               variant="outline"
               onClick={() => {
@@ -531,126 +556,246 @@ export default function AdminEmployees() {
               <TabsTrigger value="security" className="flex items-center gap-2"><ShieldCheck className="h-4 w-4" /> Access Matrix</TabsTrigger>
             </TabsList>
 
-            <TabsContent value="rankings" className="space-y-6 py-4">
-              <div className="grid gap-6 md:grid-cols-[1fr_2fr]">
-                {/* Left: Department List (Master) */}
-                <div className="space-y-4 border-r pr-6">
-                  <div className="flex items-center justify-between">
-                    <Label className="text-sm font-semibold">1. Rank Departments</Label>
-                    <CreateMetadataButton
-                      label="Dept"
-                      onAdd={v => setRankingsForm(prev => ({ ...prev, departments: [...prev.departments, normalize(v)] }))}
-                    />
-                  </div>
-                  <RankListBuilder
-                    items={rankingsForm.departments}
-                    available={departments}
-                    adminRank={isSuperAdmin ? -1 : getRank(profile?.department, rankings.departments)}
-                    onChange={v => setRankingsForm({ ...rankingsForm, departments: v })}
-                    onDeleteGlobal={v => deleteMetadata.mutate({ type: 'department', value: v }, {
-                      onSuccess: () => {
-                        toast.success(`Department "${v}" deleted`);
-                        setRankingsForm(prev => ({ ...prev, departments: prev.departments.filter(x => x !== v) }));
-                        if (selectedRankDept === v) setSelectedRankDept(null);
-                      }
-                    })}
-                  />
-                  <div className="pt-4 border-t">
-                    <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Select to Manage Roles</p>
-                    <div className="space-y-1">
-                      {rankingsForm.departments.map(d => (
-                        <button
-                          key={d}
-                          onClick={() => setSelectedRankDept(d)}
-                          className={cn(
-                            "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-all text-left",
-                            selectedRankDept === d ? "bg-primary text-white shadow-soft" : "hover:bg-muted"
-                          )}
-                        >
-                          <span className="truncate">{d}</span>
-                          <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
+            <TabsContent value="rankings" className="py-4 space-y-6">
+              <Tabs defaultValue="departmental" className="w-full">
+                <TabsList className="grid w-full grid-cols-2 mb-6 h-9 p-1 bg-muted/50">
+                  <TabsTrigger value="departmental" className="text-xs gap-2">
+                    <LayoutGrid className="h-3.5 w-3.5" /> Departmental Roles
+                  </TabsTrigger>
+                  <TabsTrigger value="global" className="text-xs gap-2">
+                    <Shield className="h-3.5 w-3.5" /> Global Seniority (All Roles)
+                  </TabsTrigger>
+                </TabsList>
 
-                {/* Right: Job Title List for Selected Dept (Detail) */}
-                <div className="space-y-4">
-                  {selectedRankDept ? (
-                    <div className="animate-in fade-in slide-in-from-right-4">
-                      <div className="flex items-center justify-between mb-4">
-                        <div>
-                          <h3 className="font-semibold flex items-center gap-2">
-                            <Building2 className="h-4 w-4 text-primary" /> {selectedRankDept} Roles
-                          </h3>
-                          <p className="text-xs text-muted-foreground">Define and rank roles within this department.</p>
-                        </div>
-                        <CreateMetadataButton
-                          label="Role"
-                          onAdd={v => {
-                            const normalized = normalize(v);
-                            setRankingsForm(prev => {
-                              const existing = prev.deptToJobs?.[selectedRankDept] || [];
-                              return {
-                                ...prev,
-                                jobTitles: [...prev.jobTitles, normalized],
-                                deptToJobs: {
-                                  ...prev.deptToJobs,
-                                  [selectedRankDept]: [...existing, normalized]
-                                }
-                              };
-                            });
-                          }}
-                        />
+                <TabsContent value="departmental" className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-[1fr_2fr]">
+                    {/* Left: Department List (Master) */}
+                    <div className="space-y-4 border-r pr-6">
+                      <div className="flex items-center justify-between">
+                        <Label className="text-sm font-semibold">1. Rank Departments</Label>
+                        {isSuperAdmin && (
+                          <CreateMetadataButton
+                            label="Dept"
+                            onAdd={v => setRankingsForm(prev => ({ ...prev, departments: [...prev.departments, normalize(v)] }))}
+                          />
+                        )}
                       </div>
                       <RankListBuilder
-                        items={rankingsForm.deptToJobs?.[selectedRankDept] || []}
-                        available={jobTitles}
-                        adminRank={isSuperAdmin ? -1 : getRank(profile?.job_title, rankings.jobTitles)}
-                        onChange={v => setRankingsForm(prev => ({
-                          ...prev,
-                          deptToJobs: {
-                            ...prev.deptToJobs,
-                            [selectedRankDept]: v
-                          }
-                        }))}
-                        onDeleteGlobal={v => deleteMetadata.mutate({ type: 'job_title', value: v }, {
+                        items={rankingsForm.departments}
+                        available={departments}
+                        viewerItem={profile?.department}
+                        seniorityList={rankings.departments}
+                        onChange={v => setRankingsForm({ ...rankingsForm, departments: v })}
+                        onDeleteGlobal={isSuperAdmin ? (v => deleteMetadata.mutate({ type: 'department', value: v }, {
                           onSuccess: () => {
-                            toast.success(`Role "${v}" deleted`);
-                            setRankingsForm(prev => ({
-                              ...prev,
-                              jobTitles: prev.jobTitles.filter(x => x !== v),
-                              deptToJobs: Object.fromEntries(
-                                Object.entries(prev.deptToJobs || {}).map(([k, roles]) => [k, (roles as string[]).filter(r => r !== v)])
-                              )
-                            }));
+                            toast.success(`Department "${v}" deleted`);
+                            setRankingsForm(prev => ({ ...prev, departments: prev.departments.filter(x => x !== v) }));
+                            if (selectedRankDept === v) setSelectedRankDept(null);
                           }
-                        })}
+                        })) : undefined}
+                      />
+                      <div className="pt-4 border-t">
+                        <p className="text-[10px] text-muted-foreground uppercase tracking-wider mb-2">Select to Manage Roles</p>
+                        <div className="space-y-1">
+                          {(() => {
+                            const currentSettings = profile ? getVisibilitySettings(profile, visibility) : null;
+                            const currentUserManagedDepts = isSuperAdmin ? null : (currentSettings?.manages_depts || []);
+
+                            const visibleDepts = rankingsForm.departments.filter(d => 
+                              isSuperAdmin || (currentUserManagedDepts && currentUserManagedDepts.includes(d))
+                            );
+
+                            return visibleDepts.map(d => (
+                              <button
+                                key={d}
+                                onClick={() => setSelectedRankDept(d)}
+                                className={cn(
+                                  "w-full flex items-center justify-between px-3 py-2 text-sm rounded-md transition-all text-left",
+                                  selectedRankDept === d ? "bg-primary text-white shadow-soft" : "hover:bg-muted"
+                                )}
+                              >
+                                <span className="truncate">{d}</span>
+                                <ChevronsUpDown className="h-3.5 w-3.5 opacity-50" />
+                              </button>
+                            ));
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Right: Job Title List for Selected Dept (Detail) */}
+                    <div className="space-y-4">
+                      {selectedRankDept ? (
+                        <div className="animate-in fade-in slide-in-from-right-4">
+                          <div className="flex items-center justify-between mb-4">
+                            <div>
+                              <h3 className="font-semibold flex items-center gap-2">
+                                <Building2 className="h-4 w-4 text-primary" /> {selectedRankDept} Roles
+                              </h3>
+                              <p className="text-xs text-muted-foreground">Define and rank roles within this department.</p>
+                            </div>
+                            {(isSuperAdmin || canEditControlCenter(profile, visibility)) && (
+                              <CreateMetadataButton
+                                label="Role"
+                                onAdd={v => {
+                                  const normalized = normalize(v);
+                                  setRankingsForm(prev => {
+                                    const existing = prev.deptToJobs?.[selectedRankDept] || [];
+                                    return {
+                                      ...prev,
+                                      jobTitles: Array.from(new Set([...prev.jobTitles, normalized])),
+                                      deptToJobs: {
+                                        ...prev.deptToJobs,
+                                        [selectedRankDept]: [...existing, normalized]
+                                      }
+                                    };
+                                  });
+                                }}
+                              />
+                            )}
+                          </div>
+                          <RankListBuilder
+                            items={rankingsForm.deptToJobs?.[selectedRankDept] || []}
+                            available={rankingsForm.jobTitles}
+                            viewerItem={profile?.job_title}
+                            seniorityList={rankingsForm.jobTitles}
+                            onChange={v => {
+                              if (isSuperAdmin || canEditControlCenter(profile, visibility)) {
+                                setRankingsForm(prev => ({
+                                  ...prev,
+                                  deptToJobs: {
+                                    ...prev.deptToJobs,
+                                    [selectedRankDept]: v
+                                  }
+                                }));
+                              }
+                            }}
+                            onDeleteGlobal={isSuperAdmin ? (v => deleteMetadata.mutate({ type: 'job_title', value: v }, {
+                              onSuccess: () => {
+                                toast.success(`Role "${v}" deleted`);
+                                setRankingsForm(prev => ({
+                                  ...prev,
+                                  jobTitles: prev.jobTitles.filter(x => x !== v),
+                                  deptToJobs: Object.fromEntries(
+                                    Object.entries(prev.deptToJobs || {}).map(([k, roles]) => [k, (roles as string[]).filter(r => r !== v)])
+                                  )
+                                }));
+                              }
+                            })) : undefined}
+                          />
+                        </div>
+                      ) : (
+                        <div className="flex h-40 items-center justify-center text-muted-foreground italic text-sm border-2 border-dashed rounded-lg">
+                          Select a department on the left to manage its roles.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="global" className="space-y-6">
+                  <div className="max-w-2xl mx-auto space-y-4">
+                    <div className="rounded-lg border bg-blue-50/30 p-4 border-blue-100">
+                      <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2 mb-1">
+                        <Shield className="h-4 w-4" /> Global Job Seniority
+                      </h3>
+                      <p className="text-xs text-blue-600/80 italic">
+                        Admins can only manage roles that are ranked **below them** in this list. 
+                        <strong> Move "Founder" to the top (#0) to give it full seniority.</strong>
+                      </p>
+                    </div>
+
+                    <div className="rounded-md border p-4 bg-card shadow-sm">
+                      <RankListBuilder
+                        items={rankingsForm.jobTitles}
+                        available={rankingsForm.jobTitles}
+                        adminRank={isSuperAdmin ? -1 : getRank(profile?.job_title, rankingsForm.jobTitles)}
+                        onChange={v => {
+                          if (isSuperAdmin || (profile?.department === 'Management' && canEditControlCenter(profile, visibility))) {
+                            setRankingsForm(prev => ({ ...prev, jobTitles: v }));
+                          } else {
+                            toast.error("Only SuperAdmins or top-level Management can reorder global seniority.");
+                          }
+                        }}
                       />
                     </div>
-                  ) : (
-                    <div className="flex h-40 items-center justify-center text-muted-foreground italic text-sm border-2 border-dashed rounded-lg">
-                      Select a department on the left to manage its roles.
-                    </div>
-                  )}
-                </div>
-              </div>
+                  </div>
+                </TabsContent>
+              </Tabs>
             </TabsContent>
 
-            <TabsContent value="security" className="py-4">
-              <div className="rounded-lg border bg-muted/20 p-1 mb-6">
-                <p className="text-xs text-muted-foreground p-3 italic">
-                  Define which departments are "Visible" to each other. For each viewer department, check the boxes for which target departments they can see, and whether they can see Job Titles or Profile Details.
-                </p>
+            <TabsContent value="security" className="py-4 space-y-6">
+              <div className="flex items-center justify-between gap-4">
+                <div className="rounded-lg border bg-muted/20 p-1 flex-1">
+                  <p className="text-[10px] text-muted-foreground p-2 italic">
+                    Define visibility and administrative access. Base department rules apply to everyone unless overridden by a specific role.
+                  </p>
+                </div>
+                {isSuperAdmin && (
+                  <AddRoleOverrideButton 
+                    departments={rankingsForm.departments.length > 0 ? rankingsForm.departments : departments}
+                    deptToJobs={rankingsForm.deptToJobs || {}}
+                    onAdd={(dept, job) => {
+                      const key = `${dept}:${job}`;
+                      if (visibilityForm[key]) {
+                        toast.error("Override already exists for this role.");
+                        return;
+                      }
+                      setVisibilityForm({
+                        ...visibilityForm,
+                        [key]: { sees: [dept], sees_jobs: true, sees_profiles: true }
+                      });
+                      toast.success(`Added override for ${key}`);
+                    }}
+                  />
+                )}
               </div>
-              <div className="overflow-x-auto">
-                <AccessMatrix
-                  departments={rankingsForm.departments.length > 0 ? rankingsForm.departments : departments}
-                  value={visibilityForm}
-                  onChange={setVisibilityForm}
-                />
-              </div>
+
+              {(() => {
+                const currentSettings = profile ? getVisibilitySettings(profile, visibility) : null;
+                const currentUserManagedDepts = isSuperAdmin ? null : (currentSettings?.manages_depts || []);
+                const depts = rankingsForm.departments.length > 0 ? rankingsForm.departments : departments;
+                const canE = isSuperAdmin || canEditControlCenter(profile, visibility);
+
+                return (
+                  <Tabs defaultValue="depts_table" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2 mb-4 h-9 p-1 bg-muted/50">
+                      <TabsTrigger value="depts_table" className="text-xs gap-2">
+                        <Building2 className="h-3 w-3" /> Department Permissions
+                      </TabsTrigger>
+                      <TabsTrigger value="roles_table" className="text-xs gap-2">
+                        <ShieldCheck className="h-3 w-3" /> Role-Specific Overrides
+                      </TabsTrigger>
+                    </TabsList>
+
+                    <TabsContent value="depts_table" className="mt-0">
+                      <div className="overflow-x-auto rounded-md border bg-card shadow-sm">
+                        <AccessMatrix
+                          departments={depts}
+                          value={visibilityForm}
+                          onChange={setVisibilityForm}
+                          canEdit={canE}
+                          currentUserManagedDepts={currentUserManagedDepts}
+                          type="dept"
+                        />
+                      </div>
+                    </TabsContent>
+
+                    <TabsContent value="roles_table" className="mt-0">
+                      <div className="overflow-x-auto rounded-md border bg-card shadow-sm">
+                        <AccessMatrix
+                          departments={depts}
+                          value={visibilityForm}
+                          onChange={setVisibilityForm}
+                          canEdit={canE}
+                          currentUserManagedDepts={currentUserManagedDepts}
+                          type="role"
+                        />
+                      </div>
+                    </TabsContent>
+                  </Tabs>
+                );
+              })()}
             </TabsContent>
           </Tabs>
 
@@ -867,74 +1012,259 @@ function CreateMetadataButton({ label, onAdd }: { label: string, onAdd: (val: st
   );
 }
 
-function AccessMatrix({ departments, value, onChange }: { departments: string[], value: VisibilityMap, onChange: (v: VisibilityMap) => void }) {
+function AddRoleOverrideButton({ 
+  departments, 
+  deptToJobs, 
+  onAdd 
+}: { 
+  departments: string[], 
+  deptToJobs: Record<string, string[]>, 
+  onAdd: (dept: string, job: string) => void 
+}) {
+  const [open, setOpen] = useState(false);
+  const [selDept, setSelDept] = useState("");
+  const [selJob, setSelJob] = useState("");
+
+  const jobs = selDept ? (deptToJobs[selDept] || []) : [];
+
   return (
-    <table className="w-full text-sm border-collapse">
-      <thead>
-        <tr className="bg-muted/50 border-y">
-          <th className="px-4 py-3 text-left font-semibold">Viewer Department</th>
-          <th className="px-4 py-3 text-left font-semibold">Visible Departments (Directory)</th>
-          <th className="px-4 py-3 text-center font-semibold">Job Titles?</th>
-          <th className="px-4 py-3 text-center font-semibold">Profiles?</th>
-        </tr>
-      </thead>
-      <tbody>
-        {departments.map(viewer => {
-          const settings = value[viewer] || { sees: [viewer], sees_jobs: true, sees_profiles: true };
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 gap-2 border-orange-200 bg-orange-50/30 text-orange-700 hover:bg-orange-50 hover:border-orange-300">
+          <ShieldCheck className="h-4 w-4" /> Add Role Override
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-72 p-4">
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground">1. Select Department</Label>
+            <select 
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+              value={selDept}
+              onChange={e => { setSelDept(e.target.value); setSelJob(""); }}
+            >
+              <option value="">Choose department...</option>
+              {departments.map(d => <option key={d} value={d}>{d}</option>)}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground">2. Select Job Title</Label>
+            <select 
+              className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm disabled:opacity-50"
+              value={selJob}
+              disabled={!selDept}
+              onChange={e => setSelJob(e.target.value)}
+            >
+              <option value="">Choose job title...</option>
+              {jobs.map(j => <option key={j} value={j}>{j}</option>)}
+            </select>
+          </div>
+          <Button 
+            className="w-full bg-orange-600 text-white hover:bg-orange-700" 
+            disabled={!selDept || !selJob}
+            onClick={() => {
+              onAdd(selDept, selJob);
+              setOpen(false);
+              setSelDept("");
+              setSelJob("");
+            }}
+          >
+            Create Override
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
 
-          const toggleDept = (dept: string) => {
-            const newSees = settings.sees.includes(dept)
-              ? settings.sees.filter(d => d !== dept)
-              : [...settings.sees, dept];
-            onChange({ ...value, [viewer]: { ...settings, sees: newSees } });
-          };
+function AccessMatrix({ 
+  departments, 
+  value, 
+  onChange,
+  canEdit = true,
+  currentUserManagedDepts,
+  type = 'dept' // 'dept' or 'role'
+}: { 
+  departments: string[], 
+  value: VisibilityMap, 
+  onChange: (v: VisibilityMap) => void,
+  canEdit?: boolean,
+  currentUserManagedDepts?: string[] | null,
+  type?: 'dept' | 'role'
+}) {
+  const { profile } = useApp();
+  const isSuperAdmin = profile?.role === 'superadmin';
 
-          const toggleBool = (key: 'sees_jobs' | 'sees_profiles') => {
-            onChange({ ...value, [viewer]: { ...settings, [key]: !settings[key] } });
-          };
+  // Filter keys based on type and management permissions
+  const filteredKeys = useMemo(() => {
+    const keys = type === 'dept' 
+      ? [...departments] 
+      : Object.keys(value).filter(k => !departments.includes(k));
 
-          return (
-            <tr key={viewer} className="border-b hover:bg-muted/10 transition-colors">
-              <td className="px-4 py-4 font-bold text-primary">{viewer}</td>
-              <td className="px-4 py-4">
-                <div className="flex flex-wrap gap-2">
-                  {departments.map(target => (
-                    <button
-                      key={target}
-                      onClick={() => toggleDept(target)}
-                      className={cn(
-                        "px-2 py-1 rounded-md text-[11px] font-medium border transition-all",
-                        settings.sees.includes(target)
-                          ? "bg-primary/10 border-primary/40 text-primary shadow-sm"
-                          : "bg-background border-muted text-muted-foreground opacity-60 hover:opacity-100"
-                      )}
-                    >
-                      {target}
-                    </button>
-                  ))}
-                </div>
-              </td>
-              <td className="px-4 py-4 text-center">
-                <input
-                  type="checkbox"
-                  checked={settings.sees_jobs}
-                  onChange={() => toggleBool('sees_jobs')}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-              </td>
-              <td className="px-4 py-4 text-center">
-                <input
-                  type="checkbox"
-                  checked={settings.sees_profiles}
-                  onChange={() => toggleBool('sees_profiles')}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
-                />
-              </td>
-            </tr>
-          );
-        })}
-      </tbody>
-    </table>
+    let result = keys.sort((a, b) => a.localeCompare(b));
+
+    // FILTERING LOGIC: If not superadmin, only show keys they manage
+    if (currentUserManagedDepts) {
+      result = result.filter(k => {
+        const [dept] = k.split(':');
+        return currentUserManagedDepts.includes(dept);
+      });
+    }
+
+    return result;
+  }, [departments, value, currentUserManagedDepts, type]);
+
+  if (filteredKeys.length === 0 && type === 'role') {
+    return (
+      <div className="text-center py-8 border-2 border-dashed rounded-lg text-muted-foreground text-xs italic">
+        No role-specific overrides created yet.
+      </div>
+    );
+  }
+
+  const removeKey = (key: string) => {
+    const newVal = { ...value };
+    delete newVal[key];
+    onChange(newVal);
+  };
+
+  return (
+    <div className="space-y-4">
+      <table className="w-full text-[11px] border-collapse">
+        <thead>
+          <tr className="bg-muted/50 border-y">
+            <th className="px-3 py-2 text-left font-semibold w-40">{type === 'dept' ? 'Viewer Department' : 'Specific Role (Dept:Job)'}</th>
+            <th className="px-3 py-2 text-left font-semibold">Visible Departments</th>
+            <th className="px-3 py-2 text-center font-semibold w-16">Jobs?</th>
+            <th className="px-3 py-2 text-center font-semibold w-16">Profiles?</th>
+            <th className="px-3 py-2 text-center font-semibold w-16 text-primary">Control Access?</th>
+            <th className="px-3 py-2 text-center font-semibold w-16 text-primary">Can Edit?</th>
+            <th className="px-3 py-2 text-left font-semibold w-48 text-primary">Managed Depts</th>
+            <th className="px-3 py-2 w-8"></th>
+          </tr>
+        </thead>
+        <tbody>
+          {filteredKeys.map(key => {
+            const settings = value[key] || { sees: [key], sees_jobs: true, sees_profiles: true };
+            const isCustom = type === 'role';
+
+            const toggleDept = (dept: string) => {
+              if (!canEdit) return;
+              const newSees = settings.sees.includes(dept)
+                ? settings.sees.filter(d => d !== dept)
+                : [...settings.sees, dept];
+              onChange({ ...value, [key]: { ...settings, sees: newSees } });
+            };
+
+            const toggleBool = (field: keyof VisibilityMap[string]) => {
+              if (!canEdit) return;
+              onChange({ ...value, [key]: { ...settings, [field]: !settings[field] } });
+            };
+
+            const toggleManagedDept = (dept: string) => {
+              if (!canEdit) return;
+              const current = settings.manages_depts || [];
+              const next = current.includes(dept)
+                ? current.filter(d => d !== dept)
+                : [...current, dept];
+              onChange({ ...value, [key]: { ...settings, manages_depts: next } });
+            };
+
+            return (
+              <tr key={key} className="border-b hover:bg-muted/5 transition-colors">
+                <td className="px-3 py-3 align-top">
+                  <div className={cn("font-bold", isCustom ? "text-orange-600" : "text-primary")}>
+                    {key}
+                  </div>
+                </td>
+                <td className="px-3 py-3 align-top">
+                  <div className="flex flex-wrap gap-1">
+                    {departments.map(target => (
+                      <button
+                        key={target}
+                        disabled={!canEdit}
+                        onClick={() => toggleDept(target)}
+                        className={cn(
+                          "px-1.5 py-0.5 rounded text-[10px] border transition-all",
+                          settings.sees.includes(target)
+                            ? "bg-primary/10 border-primary/30 text-primary"
+                            : "bg-background border-muted text-muted-foreground opacity-40 hover:opacity-100"
+                        )}
+                      >
+                        {target}
+                      </button>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-3 py-3 text-center align-top">
+                  <input
+                    type="checkbox"
+                    disabled={!canEdit}
+                    checked={!!settings.sees_jobs}
+                    onChange={() => toggleBool('sees_jobs')}
+                    className="h-3 w-3 rounded border-gray-300 text-primary"
+                  />
+                </td>
+                <td className="px-3 py-3 text-center align-top">
+                  <input
+                    type="checkbox"
+                    disabled={!canEdit}
+                    checked={!!settings.sees_profiles}
+                    onChange={() => toggleBool('sees_profiles')}
+                    className="h-3 w-3 rounded border-gray-300 text-primary"
+                  />
+                </td>
+                <td className="px-3 py-3 text-center align-top bg-primary/5">
+                  <input
+                    type="checkbox"
+                    disabled={!isSuperAdmin} // Strictly SuperAdmin only
+                    checked={!!settings.can_access_control}
+                    onChange={() => toggleBool('can_access_control')}
+                    className="h-3 w-3 rounded border-gray-300 text-primary cursor-pointer disabled:cursor-not-allowed"
+                  />
+                </td>
+                <td className="px-3 py-3 text-center align-top bg-primary/5">
+                  <input
+                    type="checkbox"
+                    disabled={!isSuperAdmin} // Strictly SuperAdmin only
+                    checked={!!settings.can_edit_control}
+                    onChange={() => toggleBool('can_edit_control')}
+                    className="h-3 w-3 rounded border-gray-300 text-primary cursor-pointer disabled:cursor-not-allowed"
+                  />
+                </td>
+                <td className="px-3 py-3 align-top bg-primary/5">
+                  <div className="flex flex-wrap gap-1">
+                    {departments.map(target => (
+                      <button
+                        key={target}
+                        disabled={!isSuperAdmin} // Strictly SuperAdmin only
+                        onClick={() => toggleManagedDept(target)}
+                        className={cn(
+                          "px-1.5 py-0.5 rounded text-[9px] border transition-all",
+                          (settings.manages_depts || []).includes(target)
+                            ? "bg-blue-600/10 border-blue-600/30 text-blue-700"
+                            : "bg-background border-muted text-muted-foreground opacity-30 hover:opacity-100",
+                          !isSuperAdmin && "cursor-not-allowed"
+                        )}
+                      >
+                        {target}
+                      </button>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-3 py-3 text-right align-top">
+                  {isCustom && canEdit && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => removeKey(key)}>
+                      <X className="h-3 w-3" />
+                    </Button>
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
   );
 }
 
@@ -1062,15 +1392,34 @@ function RankListBuilder({
   available,
   onChange,
   onDeleteGlobal,
-  adminRank
+  viewerItem,
+  seniorityList
 }: {
   items: string[],
   available: string[],
   onChange: (items: string[]) => void;
   onDeleteGlobal?: (item: string) => void;
-  adminRank: number;
+  viewerItem?: string | null;
+  seniorityList?: string[];
 }) {
-  const unranked = available.filter(a => !items.includes(a));
+  const [search, setSearch] = useState("");
+  const { profile } = useApp();
+  const isSuperAdmin = profile?.role === 'superadmin';
+
+  const unranked = available
+    .filter(a => !items.includes(a))
+    .filter(a => a.toLowerCase().includes(search.toLowerCase()));
+
+  // Helper to check if an item is "Senior" to the viewer
+  const isSenior = (item: string) => {
+    if (isSuperAdmin) return false;
+    if (!viewerItem || !seniorityList) return false;
+    
+    const itemRank = getRank(item, seniorityList);
+    const viewerRank = getRank(viewerItem, seniorityList);
+    
+    return itemRank < viewerRank;
+  };
 
   const sensors = useSensors(
     useSensor(PointerSensor),
@@ -1082,14 +1431,13 @@ function RankListBuilder({
   function handleDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (over && active.id !== over.id) {
-      const oldIndex = items.indexOf(active.id as string);
-      const newIndex = items.indexOf(over.id as string);
-
-      if (oldIndex <= adminRank || newIndex <= adminRank) {
-        toast.error("Hierarchy Protection: You cannot reorder items at or above your own rank.");
+      if (isSenior(active.id as string) || isSenior(over.id as string)) {
+        toast.error("Hierarchy Protection: You cannot reorder items above your own rank.");
         return;
       }
 
+      const oldIndex = items.indexOf(active.id as string);
+      const newIndex = items.indexOf(over.id as string);
       onChange(arrayMove(items, oldIndex, newIndex));
     }
   }
@@ -1112,12 +1460,12 @@ function RankListBuilder({
             strategy={verticalListSortingStrategy}
           >
             <div className="space-y-2">
-              {items.map((item, idx) => (
+              {items.map((item) => (
                 <SortableItem
                   key={item}
                   id={item}
                   item={item}
-                  disabled={idx <= adminRank}
+                  disabled={isSenior(item)}
                   onRemove={() => onChange(items.filter(x => x !== item))}
                   onDeleteGlobal={onDeleteGlobal}
                 />
@@ -1132,9 +1480,20 @@ function RankListBuilder({
         </DndContext>
       </div>
 
-      <div className="space-y-2">
-        <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Available (Unranked)</Label>
-        <div className="flex flex-wrap gap-2">
+      <div className="space-y-3 pt-2 border-t">
+        <div className="flex items-center justify-between gap-4">
+          <Label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground whitespace-nowrap">Available (Unranked)</Label>
+          <div className="relative flex-1 max-w-[200px]">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3 w-3 text-muted-foreground" />
+            <Input 
+              placeholder="Search roles..." 
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="h-7 pl-7 text-[10px]"
+            />
+          </div>
+        </div>
+        <div className="flex flex-wrap gap-2 max-h-[120px] overflow-y-auto p-1">
           {unranked.map(u => {
             return (
               <button
@@ -1147,7 +1506,11 @@ function RankListBuilder({
               </button>
             );
           })}
-          {unranked.length === 0 && <div className="text-xs text-muted-foreground">All items are ranked.</div>}
+          {unranked.length === 0 && (
+            <div className="text-[10px] text-muted-foreground italic">
+              {search ? "No matches found." : "All items are ranked."}
+            </div>
+          )}
         </div>
       </div>
     </div>
