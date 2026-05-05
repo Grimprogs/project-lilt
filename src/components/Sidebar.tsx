@@ -1,7 +1,10 @@
+import { useMemo } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { LayoutDashboard, Users, ListTodo, PlusCircle, User, LogOut, CheckSquare2, Inbox } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { useTasks } from "@/hooks/useTasks";
+import { useProfiles } from "@/hooks/useProfiles";
+import { useVisibilitySettings, VisibilityMap } from "@/hooks/useSettings";
 import { cn } from "@/lib/utils";
 
 const adminNav = [
@@ -28,14 +31,52 @@ export function Sidebar({ open, onClose }: Props) {
   const { pathname } = useLocation();
   const isAdmin = user?.role === "admin" || user?.role === "superadmin";
   const items = isAdmin ? adminNav : empNav;
-  const { data: tasks = [] } = useTasks(
+  const { data: allTasks = [] } = useTasks(
     user?.role === "employee"
       ? { role: "employee", userId: user.employeeId }
       : user
         ? { role: "admin" }
         : undefined
   );
-  const approvalsCount = tasks.filter(t => t.status === "completion_requested").length;
+  const { data: profiles = [] } = useProfiles();
+  const { data: visibility = {} } = useVisibilitySettings() as { data: VisibilityMap };
+  const isSuperAdmin = user?.role === "superadmin";
+
+  const getVisibilitySettings = (p: any) => {
+    if (!p) return null;
+    const personKey = `profile:${p.id}`;
+    const roleKey = `${p.department}:${p.job_title}`;
+    return visibility[personKey] || visibility[roleKey] || visibility[p.department] || null;
+  };
+
+  const allowedAssignDepts = useMemo(() => {
+    if (isSuperAdmin) return null;
+    if (!profile) return [] as string[];
+    const settings = getVisibilitySettings(profile) || { sees: [], sees_jobs: false, sees_profiles: false };
+    const assignable = (settings.assignable_depts || []).map((d: string) => d.toLowerCase());
+    if (assignable.length > 0) return assignable;
+    if (settings.can_assign_tasks && profile.department) return [profile.department.toLowerCase()];
+    return [] as string[];
+  }, [isSuperAdmin, profile, visibility]);
+
+  const approvalsCount = useMemo(() => {
+    return allTasks.filter(t => {
+      if (t.status !== "completion_requested") return false;
+      
+      // Stealth Mode: Hide other Super Admin tasks
+      const assignee = profiles.find(p => p.id === t.assignee_id);
+      if (assignee?.role === 'superadmin' && assignee.id !== profile?.id) {
+        return false;
+      }
+
+      // Scope to allowed assignment departments (non-superadmin)
+      if (!isSuperAdmin && allowedAssignDepts) {
+        const dept = (assignee?.department || '').toLowerCase();
+        if (!allowedAssignDepts.includes(dept)) return false;
+      }
+      return true;
+    }).length;
+  }, [allTasks, profiles, profile, isSuperAdmin, allowedAssignDepts]);
 
   return (
     <>
