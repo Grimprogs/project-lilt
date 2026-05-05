@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useApp } from "@/context/AppContext";
 import { useTasks } from "@/hooks/useTasks";
 import { useProfiles } from "@/hooks/useProfiles";
+import { useVisibilitySettings } from "@/hooks/useSettings";
 import { Users, ListTodo, CheckCircle2, Clock, AlertTriangle, TrendingUp, Inbox, Activity, Download } from "lucide-react";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,24 @@ export default function AdminDashboard() {
   const isSuperAdmin = user?.role === 'superadmin';
   const { data: allTasks = [] } = useTasks({ role: "admin" });
   const { data: allEmployees = [] } = useProfiles();
+  const { data: visibility = {} } = useVisibilitySettings();
+
+  const getVisibilitySettings = (p: any) => {
+    if (!p) return null;
+    const personKey = `profile:${p.id}`;
+    const roleKey = `${p.department}:${p.job_title}`;
+    return visibility[personKey] || visibility[roleKey] || visibility[p.department] || null;
+  };
+
+  const allowedAssignDepts = useMemo(() => {
+    if (isSuperAdmin) return null;
+    if (!profile) return [] as string[];
+    const settings = getVisibilitySettings(profile) || { sees: [], sees_jobs: false, sees_profiles: false };
+    const assignable = (settings.assignable_depts || []).map((d: string) => d.toLowerCase());
+    if (assignable.length > 0) return assignable;
+    if (settings.can_assign_tasks && profile.department) return [profile.department.toLowerCase()];
+    return [] as string[];
+  }, [isSuperAdmin, profile, visibility]);
 
   // Stealth Mode: Filter out other Super Admins and their tasks
   const employees = useMemo(() => {
@@ -59,9 +78,13 @@ export default function AdminDashboard() {
     return allTasks.filter(t => {
       const emp = allEmployees.find(e => e.id === t.assignee_id);
       if (emp?.role === 'superadmin') return emp.id === profile?.id;
+      if (!isSuperAdmin && allowedAssignDepts) {
+        const dept = (emp?.department || '').toLowerCase();
+        if (!allowedAssignDepts.includes(dept)) return false;
+      }
       return true;
     });
-  }, [allTasks, allEmployees, profile?.id]);
+  }, [allTasks, allEmployees, profile?.id, allowedAssignDepts, isSuperAdmin]);
 
   const completed = tasks.filter(t => t.status === "completed").length;
   const pending   = tasks.filter(t => t.status === "pending").length;
@@ -274,7 +297,10 @@ export default function AdminDashboard() {
         <div className="surface-card p-5">
           <h2 className="font-display text-lg font-semibold mb-4">Top performers</h2>
           <ul className="space-y-3">
-            {[...employees]
+            {(isSuperAdmin || !allowedAssignDepts
+              ? [...employees]
+              : employees.filter(e => allowedAssignDepts.includes((e.department || '').toLowerCase()))
+            )
               .map(e => {
                 const total = tasks.filter(t => t.assignee_id === e.id).length;
                 const done  = tasks.filter(t => t.assignee_id === e.id && t.status === "completed").length;

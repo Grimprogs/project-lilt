@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { useApp } from "@/context/AppContext";
 import { useTasks } from "@/hooks/useTasks";
 import { useProfiles } from "@/hooks/useProfiles";
+import { useVisibilitySettings } from "@/hooks/useSettings";
 import { TaskCard } from "@/components/TaskCard";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -13,12 +14,38 @@ export default function AdminTasks() {
   const { profile } = useApp();
   const { data: allTasks = [] } = useTasks({ role: "admin" });
   const { data: profiles = [] } = useProfiles();
+  const { data: visibility = {} } = useVisibilitySettings();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<"all" | any>("all");
   const [priority, setPriority] = useState<"all" | any>("all");
   const isSuperAdmin = profile?.role === 'superadmin';
 
+  const getVisibilitySettings = (p: any) => {
+    if (!p) return null;
+    const personKey = `profile:${p.id}`;
+    const roleKey = `${p.department}:${p.job_title}`;
+    return visibility[personKey] || visibility[roleKey] || visibility[p.department] || null;
+  };
+
+  const allowedAssignDepts = useMemo(() => {
+    if (isSuperAdmin) return null;
+    if (!profile) return [] as string[];
+    const settings = getVisibilitySettings(profile) || { sees: [], sees_jobs: false, sees_profiles: false };
+    const assignable = (settings.assignable_depts || []).map((d: string) => d.toLowerCase());
+    if (assignable.length > 0) return assignable;
+    if (settings.can_assign_tasks && profile.department) return [profile.department.toLowerCase()];
+    return [] as string[];
+  }, [isSuperAdmin, profile, visibility]);
+
   const filtered = useMemo(() => {
+    const canManageTask = (task: any) => {
+      if (isSuperAdmin) return true;
+      const assignee = profiles.find(p => p.id === task.assignee_id);
+      const assigneeDept = (assignee?.department || '').toLowerCase();
+      if (!allowedAssignDepts) return false;
+      return allowedAssignDepts.includes(assigneeDept);
+    };
+
     return allTasks.filter(t => {
       // 1. Stealth Mode: Hide other Super Admin tasks
       const assignee = profiles.find(p => p.id === t.assignee_id);
@@ -26,7 +53,13 @@ export default function AdminTasks() {
         return false;
       }
 
-      // 2. Standard Filters
+      // 2. Scope to allowed assignment departments (non-superadmin)
+      if (!canManageTask(t)) {
+        const assigneeDept = (assignee?.department || '').toLowerCase();
+        if (!allowedAssignDepts || !allowedAssignDepts.includes(assigneeDept)) return false;
+      }
+
+      // 3. Standard Filters
       const matchesSearch = q === "" || 
         (t.title && t.title.toLowerCase().includes(q.toLowerCase())) || 
         (t.description && t.description.toLowerCase().includes(q.toLowerCase()));
@@ -35,7 +68,7 @@ export default function AdminTasks() {
       
       return matchesSearch && matchesStatus && matchesPriority;
     });
-  }, [allTasks, profiles, q, status, priority, isSuperAdmin]);
+  }, [allTasks, profiles, q, status, priority, isSuperAdmin, allowedAssignDepts, profile?.id]);
 
   return (
     <div className="space-y-6">
@@ -81,7 +114,20 @@ export default function AdminTasks() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {filtered.map(t => <TaskCard key={t.id} task={t} canManage canApprove canComplete={t.assignee_id === profile?.id} />)}
+        {filtered.map(t => {
+          const assignee = profiles.find(p => p.id === t.assignee_id);
+          const assigneeDept = (assignee?.department || '').toLowerCase();
+          const canManageTask = isSuperAdmin || (allowedAssignDepts?.includes(assigneeDept) ?? false);
+          return (
+            <TaskCard
+              key={t.id}
+              task={t}
+              canManage={canManageTask}
+              canApprove={canManageTask}
+              canComplete={t.assignee_id === profile?.id}
+            />
+          );
+        })}
         {filtered.length === 0 && (
           <div className="surface-card p-10 text-center text-muted-foreground sm:col-span-2 xl:col-span-3">
             No tasks match these filters.

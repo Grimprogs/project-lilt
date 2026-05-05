@@ -61,7 +61,7 @@ function normalize(s: string) {
  */
 function canManage(currentAdmin: any, target: any, myGrants: DepartmentGrant[], departments: Department[], visibility: VisibilityMap) {
   if (!currentAdmin) return false;
-  if (currentAdmin.id === target.id) return true; // Can manage yourself
+
   if (currentAdmin.role === 'superadmin') return true;
   if (target.role === 'superadmin') return false; // Cannot manage superadmin
   
@@ -72,7 +72,7 @@ function canManage(currentAdmin: any, target: any, myGrants: DepartmentGrant[], 
   if (grant?.can_update_role) return true;
 
   const targetDeptName = target.department || departments.find(d => d.id === targetDeptId)?.name || "";
-  const settings = getVisibilitySettings(currentAdmin, visibility) || {};
+  const settings = getVisibilitySettings(currentAdmin, visibility) || { sees: [], sees_jobs: false, sees_profiles: false };
   const editable = (settings.editable_depts || []).map((d: string) => d.toLowerCase());
   if (settings.can_edit_profiles) {
     if (editable.length > 0 && targetDeptName && editable.includes(targetDeptName.toLowerCase())) return true;
@@ -98,7 +98,7 @@ function canSeeJobTitle(currentAdmin: any, target: any, myGrants: DepartmentGran
   return true; // Simplified for now
 }
 
-function getVisibilitySettings(profile: any, visibility: VisibilityMap) {
+function getVisibilitySettings(profile: any, visibility: VisibilityMap): VisibilityMap[string] | null {
   if (!profile) return null;
   // Priority: person-specific override -> role override (dept:job) -> department override
   const personKey = `profile:${profile.id}`;
@@ -236,7 +236,7 @@ export default function AdminEmployees() {
       if (profile && !canManage(profile, e, myGrants, departmentsData, visibility) && e.id !== profile.id && !isSuperAdmin) {
         // If they can't even "Manage", should they be visible?
         // Use viewer-specific visibility settings which prioritize person overrides.
-        const viewerSettings = getVisibilitySettings(profile, visibility) || { sees: [profile.department || ''] };
+        const viewerSettings = getVisibilitySettings(profile, visibility) || { sees: [profile.department || ''], sees_jobs: false, sees_profiles: false };
         const seesList = (viewerSettings.sees || []).map((s: string) => s.toLowerCase());
         const targetDept = (e.department || '').toLowerCase();
         if (!seesList.includes(targetDept)) return false;
@@ -1595,7 +1595,7 @@ function AccessMatrix({
                   </div>
                 </td>
                 <td className="px-3 py-3 text-right align-top">
-                  {isCustom && canEdit && (
+                  {isCustom && canEdit && isSuperAdmin && (
                     <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => removeKey(key)}>
                       <X className="h-3 w-3" />
                     </Button>

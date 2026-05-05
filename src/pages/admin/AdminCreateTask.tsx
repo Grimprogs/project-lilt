@@ -46,7 +46,7 @@ export default function AdminCreateTask() {
       return visibility[personKey] || visibility[roleKey] || visibility[p.department] || null;
     };
 
-    const viewerSettings = getViewerSettings(viewer) || {};
+    const viewerSettings = getViewerSettings(viewer) || { sees: [], sees_jobs: false, sees_profiles: false };
 
     function canAssignTo(target: any) {
       if (isSuperAdmin) return true;
