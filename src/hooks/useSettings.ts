@@ -15,6 +15,14 @@ export type VisibilityMap = Record<string, {
   can_access_control?: boolean; // can they open the control center?
   can_edit_control?: boolean; // can they save changes in the control center?
   manages_depts?: string[]; // which depts can they manage (matrix rows/rankings)?
+  // Task assignment permissions
+  can_assign_tasks?: boolean; // can assign tasks to people they can see
+  can_assign_self?: boolean; // can assign tasks to themselves
+  // Departments they are allowed to assign tasks to (optional more granular control)
+  assignable_depts?: string[];
+  // Profile edit permissions
+  can_edit_profiles?: boolean; // can edit profiles in editable_depts
+  editable_depts?: string[]; // departments they can edit profiles in
 }>;
 
 export function useRankings() {

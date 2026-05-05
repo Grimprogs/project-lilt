@@ -2,12 +2,14 @@ import { useState, useMemo, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useProfiles, useCreateEmployee, useUpdateProfile, useDeleteEmployee, useDeleteMetadata } from "@/hooks/useProfiles";
 import { useTasks } from "@/hooks/useTasks";
-import { useRankings, useUpdateRankings, useVisibilitySettings, useUpdateVisibilitySettings, VisibilityMap, Rankings } from "@/hooks/useSettings";
+import { useRankings, useUpdateRankings, Rankings, VisibilityMap, useVisibilitySettings, useUpdateVisibilitySettings } from "@/hooks/useSettings";
+import { useDepartments, useMyDepartmentGrants, DepartmentGrant, Department } from "@/hooks/useDepartments";
+import { DepartmentGrantsMatrix } from "@/components/DepartmentGrantsMatrix";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { UserAvatar } from "@/components/UserAvatar";
-import { Search, Plus, Pencil, Trash2, Mail, Building2, Eye, Briefcase, Check, ChevronsUpDown, X, Filter, ListOrdered, ShieldCheck, Settings2, LayoutGrid, Shield } from "lucide-react";
+import { Search, Plus, Pencil, Trash2, Mail, Building2, Eye, Briefcase, Check, ChevronsUpDown, X, Filter, ListOrdered, ShieldCheck, Settings2, LayoutGrid, Shield, HelpCircle } from "lucide-react";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger
 } from "@/components/ui/dialog";
@@ -18,6 +20,7 @@ import {
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger, TooltipProvider } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useApp } from "@/context/AppContext";
@@ -54,73 +57,63 @@ function normalize(s: string) {
 }
 
 /** 
- * Hierarchical Permission Check:
- * An admin can only manage someone who is BELOW them in the rankings.
+ * Hierarchical Permission Check based on Department Grants
  */
-function canManage(currentAdmin: any, target: any, rankings: { departments: string[], jobTitles: string[] }, visibility: VisibilityMap) {
+function canManage(currentAdmin: any, target: any, myGrants: DepartmentGrant[], departments: Department[], visibility: VisibilityMap) {
   if (!currentAdmin) return false;
   if (currentAdmin.id === target.id) return true; // Can manage yourself
   if (currentAdmin.role === 'superadmin') return true;
+  if (target.role === 'superadmin') return false; // Cannot manage superadmin
+  
+  const targetDeptId = target.department_id || departments.find(d => d.name === target.department)?.id;
+  if (!targetDeptId) return false;
 
-  // Check visibility map first
-  const mySettings = visibility[currentAdmin.department] || { sees: [currentAdmin.department], sees_jobs: true, sees_profiles: true };
-  const canSeeDept = mySettings.sees.includes(target.department);
-  if (!canSeeDept) return false;
+  const grant = myGrants.find(g => g.department_id === targetDeptId);
+  if (grant?.can_update_role) return true;
 
-  // Rule 1: Admins can ALWAYS manage Employees in allowed depts
-  if (target.role === 'employee') return true;
+  const targetDeptName = target.department || departments.find(d => d.id === targetDeptId)?.name || "";
+  const settings = getVisibilitySettings(currentAdmin, visibility) || {};
+  const editable = (settings.editable_depts || []).map((d: string) => d.toLowerCase());
+  if (settings.can_edit_profiles) {
+    if (editable.length > 0 && targetDeptName && editable.includes(targetDeptName.toLowerCase())) return true;
+    if (editable.length === 0 && targetDeptName && currentAdmin.department
+      && targetDeptName.toLowerCase() === currentAdmin.department.toLowerCase()) return true;
+  }
 
-  // Rule 2: If both are Admins, check hierarchy
-  const adminDeptRank = getRank(currentAdmin.department, rankings.departments);
-  const targetDeptRank = getRank(target.department, rankings.departments);
-
-  if (adminDeptRank < targetDeptRank) return true;
-  if (adminDeptRank > targetDeptRank) return false;
-
-  // Same department rank, check job title rank
-  const adminJobRank = getRank(currentAdmin.job_title, rankings.jobTitles);
-  const targetJobRank = getRank(target.job_title, rankings.jobTitles);
-
-  return adminJobRank < targetJobRank;
+  return false;
 }
 
-function canViewProfile(currentAdmin: any, target: any, visibility: VisibilityMap) {
+function canViewProfile(currentAdmin: any, target: any, myGrants: DepartmentGrant[], departments: Department[]) {
   if (currentAdmin.id === target.id) return true;
   if (currentAdmin.role === 'superadmin') return true;
-  const mySettings = visibility[currentAdmin.department];
-  if (!mySettings) return true; // Default to true if not set
-  return mySettings.sees_profiles && mySettings.sees.includes(target.department);
+  
+  const targetDeptId = target.department_id || departments.find(d => d.name === target.department)?.id;
+  if (!targetDeptId) return true; // Default to true if unassigned
+  
+  const grant = myGrants.find(g => g.department_id === targetDeptId);
+  return grant ? grant.can_read_role : true; 
 }
 
-function canSeeJobTitle(currentAdmin: any, target: any, visibility: VisibilityMap) {
-  if (currentAdmin.id === target.id) return true;
-  if (currentAdmin.role === 'superadmin') return true;
-  const mySettings = visibility[currentAdmin.department];
-  if (!mySettings) return true;
-  return mySettings.sees_jobs && mySettings.sees.includes(target.department);
+function canSeeJobTitle(currentAdmin: any, target: any, myGrants: DepartmentGrant[], departments: Department[]) {
+  return true; // Simplified for now
 }
 
-function getVisibilitySettings(admin: any, visibility: VisibilityMap) {
-  if (!admin) return null;
-  const dept = admin.department || "";
-  const job = admin.job_title || "";
-  // Check specific Dept:JobTitle first
-  const specificKey = `${dept}:${job}`;
-  if (visibility[specificKey]) return visibility[specificKey];
-  // Fallback to general Department settings
-  return visibility[dept] || null;
+function getVisibilitySettings(profile: any, visibility: VisibilityMap) {
+  if (!profile) return null;
+  // Priority: person-specific override -> role override (dept:job) -> department override
+  const personKey = `profile:${profile.id}`;
+  const roleKey = `${profile.department}:${profile.job_title}`;
+  return visibility[personKey] || visibility[roleKey] || visibility[profile.department] || null;
 }
 
 function canAccessControlCenter(admin: any, visibility: VisibilityMap) {
-  if (!admin) return false;
-  if (admin.role === 'superadmin') return true;
+  if (admin?.role === 'superadmin') return true;
   const settings = getVisibilitySettings(admin, visibility);
   return !!settings?.can_access_control;
 }
 
 function canEditControlCenter(admin: any, visibility: VisibilityMap) {
-  if (!admin) return false;
-  if (admin.role === 'superadmin') return true;
+  if (admin?.role === 'superadmin') return true;
   const settings = getVisibilitySettings(admin, visibility);
   return !!settings?.can_edit_control;
 }
@@ -180,47 +173,57 @@ export default function AdminEmployees() {
   const { data: rankings = { departments: [], jobTitles: [] } } = useRankings();
   const updateRankings = useUpdateRankings();
   const deleteMetadata = useDeleteMetadata();
-
   const { data: visibility = {} } = useVisibilitySettings();
   const updateVisibility = useUpdateVisibilitySettings();
+  const [visibilityForm, setVisibilityForm] = useState<VisibilityMap>({});
+
+  const { data: departmentsData = [] } = useDepartments();
+  const { data: myGrants = [] } = useMyDepartmentGrants(profile?.id);
+
+  // Role-specific visibility/settings for the current user (may include manages_depts)
+  const currentSettings = profile ? getVisibilitySettings(profile, visibility) : null;
 
   const [openRankings, setOpenRankings] = useState(false);
   const [rankingsForm, setRankingsForm] = useState<Rankings>({ departments: [], jobTitles: [], deptToJobs: {} });
-  const [visibilityForm, setVisibilityForm] = useState<VisibilityMap>({});
   const [selectedRankDept, setSelectedRankDept] = useState<string | null>(null);
 
   // Filtered options for the Add/Edit form based on hierarchy
   const availableDeptOptions = useMemo(() => {
-    const source = rankings.departments.length > 0 ? rankings.departments : departments;
-    if (!profile || isSuperAdmin) return source;
-    const adminDeptRank = getRank(profile.department, rankings.departments);
-    // Only show departments that are at or below the admin's rank (larger rank number)
-    return source.filter(d => getRank(d, rankings.departments) >= adminDeptRank);
-  }, [rankings.departments, departments, profile, isSuperAdmin]);
+    // Source of department names (prefer ranked list if present, otherwise the de-duped list)
+    const sourceNames = (rankings.departments && rankings.departments.length > 0)
+      ? rankings.departments
+      : (departmentsData && departmentsData.length > 0)
+        ? departmentsData.map(d => d.name)
+        : departments;
+
+    if (!profile) return sourceNames;
+    if (isSuperAdmin) return sourceNames;
+
+    // Non-superadmins may see departments they have grants for OR departments granted by their role-specific visibility overrides
+    const editableDeptIds = new Set(myGrants.filter(g => g.can_update_role || g.can_create_role).map(g => g.department_id));
+    const editableNamesFromGrants = departmentsData.filter(d => editableDeptIds.has(d.id)).map(d => d.name);
+
+    const managedByRole = Array.isArray(currentSettings?.manages_depts) ? currentSettings!.manages_depts : [];
+
+    const editableNames = Array.from(new Set([...editableNamesFromGrants, ...managedByRole]));
+
+    return sourceNames.filter(n => editableNames.includes(n));
+  }, [rankings.departments, departmentsData, departments, profile, isSuperAdmin, myGrants]);
 
   const availableJobOptions = useMemo(() => {
-    const dept = form.department || profile?.department;
-    let source = jobTitles;
+    const deptName = form.department || profile?.department;
+    if (!deptName) return [];
+    // Prefer department-specific role list; do NOT fall back to a global ranking
+    const deptJobs = (rankings.deptToJobs && rankings.deptToJobs[deptName]) ? rankings.deptToJobs[deptName] : [];
+    return deptJobs;
+  }, [rankings.deptToJobs, form.department, profile?.department]);
 
-    if (dept && rankings.deptToJobs?.[dept] && rankings.deptToJobs[dept].length > 0) {
-      source = rankings.deptToJobs[dept];
-    } else if (rankings.jobTitles.length > 0) {
-      source = rankings.jobTitles;
-    }
-
-    if (!profile || isSuperAdmin) return source;
-
-    // Check hierarchy if needed
-    const adminDeptRank = getRank(profile.department, rankings.departments);
-    const targetDeptRank = getRank(form.department, rankings.departments);
-
-    if (adminDeptRank === targetDeptRank) {
-      const adminJobRank = getRank(profile.job_title, rankings.jobTitles);
-      return source.filter(j => getRank(j, rankings.jobTitles) >= adminJobRank);
-    }
-
-    return source;
-  }, [jobTitles, rankings, profile, form.department, isSuperAdmin]);
+  // For UI: determine whether the current user can create roles in the department selected in the form
+  const selectedFormDeptObj = departmentsData.find(d => form.department && d.name && form.department && d.name.toLowerCase() === form.department.toLowerCase());
+  const selectedFormDeptId = selectedFormDeptObj?.id;
+  const canCreateRoleForSelectedDept = isSuperAdmin
+    || myGrants.some(g => g.department_id === selectedFormDeptId && g.can_create_role)
+    || (Array.isArray(currentSettings?.manages_depts) && form.department && currentSettings!.manages_depts.map(s => s.toLowerCase()).includes(form.department.toLowerCase()));
 
   const filteredAndSorted = useMemo(() => {
     const filtered = employees.filter(e => {
@@ -230,11 +233,13 @@ export default function AdminEmployees() {
       }
 
       // 2. Security Map & Hierarchy
-      if (profile && !canManage(profile, e, rankings, visibility) && e.id !== profile.id && !isSuperAdmin) {
+      if (profile && !canManage(profile, e, myGrants, departmentsData, visibility) && e.id !== profile.id && !isSuperAdmin) {
         // If they can't even "Manage", should they be visible?
-        // Let's check if they can at least "See" the dept
-        const myS = visibility[profile.department] || { sees: [profile.department] };
-        if (!myS.sees.includes(e.department || "")) return false;
+        // Use viewer-specific visibility settings which prioritize person overrides.
+        const viewerSettings = getVisibilitySettings(profile, visibility) || { sees: [profile.department || ''] };
+        const seesList = (viewerSettings.sees || []).map((s: string) => s.toLowerCase());
+        const targetDept = (e.department || '').toLowerCase();
+        if (!seesList.includes(targetDept)) return false;
       }
 
       const email = e.email ?? "";
@@ -285,21 +290,35 @@ export default function AdminEmployees() {
     e.preventDefault();
     if (!form.name || !form.username) { toast.error("Name and username are required."); return; }
     const normalizedJobTitle = form.jobTitle ? normalize(form.jobTitle) : null;
+
     if (editing) {
       // Detect if email or password changed (for auth sync)
       const emailChanged = form.email && form.email !== (editing.email || '');
       const passwordChanged = form.password && form.password.trim().length > 0;
 
+      // determine selected department id
+      const selectedDeptName = form.department || editing.department || null;
+      const deptObj = departmentsData.find(d => d.name && selectedDeptName && d.name.toLowerCase() === selectedDeptName.toLowerCase());
+      const selectedDeptId = deptObj?.id;
+
+      const canEditProfilesInDept = isSuperAdmin
+        || myGrants.some(g => g.department_id === selectedDeptId && g.can_update_role)
+        || (Array.isArray(currentSettings?.manages_depts) && selectedDeptName && currentSettings!.manages_depts.map(s => s.toLowerCase()).includes(selectedDeptName.toLowerCase()))
+        || (currentSettings?.can_edit_profiles && Array.isArray(currentSettings?.editable_depts)
+          && selectedDeptName && currentSettings.editable_depts.map(s => s.toLowerCase()).includes(selectedDeptName.toLowerCase()));
+
+      const patch: any = {
+        name: form.name,
+        username: form.username,
+        email: form.email || null,
+      };
+      if (canEditProfilesInDept) patch.department = form.department || null;
+      if (isSuperAdmin) patch.role = form.role;
+      if (canEditProfilesInDept) patch.job_title = normalizedJobTitle;
+
       updateProfile.mutate({
         id: editing.id,
-        patch: {
-          name: form.name,
-          username: form.username,
-          email: form.email || null,
-          role: form.role as any,
-          job_title: normalizedJobTitle,
-          department: form.department || null,
-        },
+        patch,
         ...(emailChanged ? { newEmail: form.email } : {}),
         ...(passwordChanged ? { newPassword: form.password } : {}),
       }, {
@@ -314,15 +333,24 @@ export default function AdminEmployees() {
         toast.error("Email and password are required to create an employee.");
         return;
       }
-      createEmployee.mutate({
+
+      const deptObj = departmentsData.find(d => d.name && form.department && d.name.toLowerCase() === form.department.toLowerCase());
+      const selectedDeptId = deptObj?.id;
+      const canCreateRoleInDept = isSuperAdmin
+        || myGrants.some(g => g.department_id === selectedDeptId && g.can_create_role)
+        || (Array.isArray(currentSettings?.manages_depts) && form.department && currentSettings!.manages_depts.map(s => s.toLowerCase()).includes(form.department.toLowerCase()));
+
+      const payload: any = {
         name: form.name,
         username: form.username,
         email: form.email,
         password: form.password,
         department: form.department || undefined,
-        job_title: normalizedJobTitle || undefined,
         role: form.role,
-      }, {
+      };
+      if (canCreateRoleInDept) payload.job_title = normalizedJobTitle || undefined;
+
+      createEmployee.mutate(payload, {
         onSuccess: () => toast.success("User added"),
         onError: (err: any) => toast.error(err?.message ?? "Create failed"),
       });
@@ -508,21 +536,35 @@ export default function AdminEmployees() {
 
                   <div className="space-y-1.5 flex flex-col">
                     <Label>Job title</Label>
-                    <select
-                      value={form.jobTitle}
-                      onChange={e => setForm({ ...form, jobTitle: e.target.value })}
-                      className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    >
-                      <option value="">Select job title...</option>
-                      {availableJobOptions.map(t => <option key={t} value={t}>{t}</option>)}
-                    </select>
+                    {availableJobOptions.length > 0 ? (
+                      <select
+                        value={form.jobTitle}
+                        onChange={e => setForm({ ...form, jobTitle: e.target.value })}
+                        className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Select job title...</option>
+                        {availableJobOptions.map(t => <option key={t} value={t}>{t}</option>)}
+                      </select>
+                    ) : (
+                      // If no predefined roles for this department, allow free-text when the user is permitted to create roles
+                      <>
+                        {canCreateRoleForSelectedDept ? (
+                          <Input value={form.jobTitle} onChange={e => setForm({ ...form, jobTitle: e.target.value })} placeholder="Enter job title..." />
+                        ) : (
+                          <select disabled className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm opacity-50">
+                            <option>No roles available</option>
+                          </select>
+                        )}
+                      </>
+                    )}
                   </div>
 
                   <div className="space-y-1.5 flex flex-col">
                     <Label>Department</Label>
                     <select
                       value={form.department}
-                      onChange={e => setForm({ ...form, department: e.target.value })}
+                      onChange={e => setForm({ ...form, department: e.target.value, jobTitle: "" })}
+                      disabled={availableDeptOptions.length === 0}
                       className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <option value="">Select department...</option>
@@ -562,9 +604,7 @@ export default function AdminEmployees() {
                   <TabsTrigger value="departmental" className="text-xs gap-2">
                     <LayoutGrid className="h-3.5 w-3.5" /> Departmental Roles
                   </TabsTrigger>
-                  <TabsTrigger value="global" className="text-xs gap-2">
-                    <Shield className="h-3.5 w-3.5" /> Global Seniority (All Roles)
-                  </TabsTrigger>
+                  {/* Global seniority removed — roles are department-scoped only */}
                 </TabsList>
 
                 <TabsContent value="departmental" className="space-y-6">
@@ -693,34 +733,7 @@ export default function AdminEmployees() {
                   </div>
                 </TabsContent>
 
-                <TabsContent value="global" className="space-y-6">
-                  <div className="max-w-2xl mx-auto space-y-4">
-                    <div className="rounded-lg border bg-blue-50/30 p-4 border-blue-100">
-                      <h3 className="text-sm font-bold text-blue-800 flex items-center gap-2 mb-1">
-                        <Shield className="h-4 w-4" /> Global Job Seniority
-                      </h3>
-                      <p className="text-xs text-blue-600/80 italic">
-                        Admins can only manage roles that are ranked **below them** in this list. 
-                        <strong> Move "Founder" to the top (#0) to give it full seniority.</strong>
-                      </p>
-                    </div>
-
-                    <div className="rounded-md border p-4 bg-card shadow-sm">
-                      <RankListBuilder
-                        items={rankingsForm.jobTitles}
-                        available={rankingsForm.jobTitles}
-                        adminRank={isSuperAdmin ? -1 : getRank(profile?.job_title, rankingsForm.jobTitles)}
-                        onChange={v => {
-                          if (isSuperAdmin || (profile?.department === 'Management' && canEditControlCenter(profile, visibility))) {
-                            setRankingsForm(prev => ({ ...prev, jobTitles: v }));
-                          } else {
-                            toast.error("Only SuperAdmins or top-level Management can reorder global seniority.");
-                          }
-                        }}
-                      />
-                    </div>
-                  </div>
-                </TabsContent>
+                {/* Global seniority removed — roles are department-scoped only */}
               </Tabs>
             </TabsContent>
 
@@ -732,22 +745,39 @@ export default function AdminEmployees() {
                   </p>
                 </div>
                 {isSuperAdmin && (
-                  <AddRoleOverrideButton 
-                    departments={rankingsForm.departments.length > 0 ? rankingsForm.departments : departments}
-                    deptToJobs={rankingsForm.deptToJobs || {}}
-                    onAdd={(dept, job) => {
-                      const key = `${dept}:${job}`;
-                      if (visibilityForm[key]) {
-                        toast.error("Override already exists for this role.");
-                        return;
-                      }
-                      setVisibilityForm({
-                        ...visibilityForm,
-                        [key]: { sees: [dept], sees_jobs: true, sees_profiles: true }
-                      });
-                      toast.success(`Added override for ${key}`);
-                    }}
-                  />
+                  <div className="flex items-center gap-2">
+                    <AddRoleOverrideButton 
+                      departments={rankingsForm.departments.length > 0 ? rankingsForm.departments : departments}
+                      deptToJobs={rankingsForm.deptToJobs || {}}
+                      onAdd={(dept, job) => {
+                        const key = `${dept}:${job}`;
+                        if (visibilityForm[key]) {
+                          toast.error("Override already exists for this role.");
+                          return;
+                        }
+                        setVisibilityForm({
+                          ...visibilityForm,
+                          [key]: { sees: [dept], sees_jobs: true, sees_profiles: true }
+                        });
+                        toast.success(`Added override for ${key}`);
+                      }}
+                    />
+                    <AddPersonOverrideButton
+                      employees={employees}
+                      departments={rankingsForm.departments.length > 0 ? rankingsForm.departments : departments}
+                      onAdd={(profileId: string, settings: any) => {
+                        const prof = employees.find((p: any) => p.id === profileId);
+                        if (!prof) { toast.error('Profile not found'); return; }
+                        const key = `profile:${profileId}`;
+                        if (visibilityForm[key]) { toast.error('Override already exists for this person.'); return; }
+                        setVisibilityForm({
+                          ...visibilityForm,
+                          [key]: settings
+                        });
+                        toast.success(`Added override for ${prof.name}`);
+                      }}
+                    />
+                  </div>
                 )}
               </div>
 
@@ -837,9 +867,9 @@ export default function AdminEmployees() {
                   const total = tasks.filter(t => t.assignee_id === e.id).length;
                   const done = tasks.filter(t => t.assignee_id === e.id && t.status === "completed").length;
                   const pct = total ? Math.round((done / total) * 100) : 0;
-                  const canM = profile ? canManage(profile, e, rankings, visibility) : false;
-                  const canV = profile ? canViewProfile(profile, e, visibility) : false;
-                  const canJ = profile ? canSeeJobTitle(profile, e, visibility) : true;
+                  const canM = profile ? canManage(profile, e, myGrants, departmentsData, visibility) : false;
+                  const canV = profile ? canViewProfile(profile, e, myGrants, departmentsData) : false;
+                  const canJ = profile ? canSeeJobTitle(profile, e, myGrants, departmentsData) : true;
 
                   return (
                     <div key={e.id} className="surface-card hover-lift p-5">
@@ -916,9 +946,9 @@ export default function AdminEmployees() {
                 {filteredAndSorted.map(e => {
                   const total = tasks.filter(t => t.assignee_id === e.id).length;
                   const done = tasks.filter(t => t.assignee_id === e.id && t.status === "completed").length;
-                  const canM = profile ? canManage(profile, e, rankings, visibility) : false;
-                  const canV = profile ? canViewProfile(profile, e, visibility) : false;
-                  const canJ = profile ? canSeeJobTitle(profile, e, visibility) : true;
+                  const canM = profile ? canManage(profile, e, myGrants, departmentsData, visibility) : false;
+                  const canV = profile ? canViewProfile(profile, e, myGrants, departmentsData) : false;
+                  const canJ = profile ? canSeeJobTitle(profile, e, myGrants, departmentsData) : true;
 
                   return (
                     <tr key={e.id} className="border-t hover:bg-muted/30 transition-colors">
@@ -1077,6 +1107,108 @@ function AddRoleOverrideButton({
   );
 }
 
+function AddPersonOverrideButton({ employees, departments, onAdd }: { employees: any[]; departments: string[]; onAdd: (id: string, settings: any) => void }) {
+  const [open, setOpen] = useState(false);
+  const [sel, setSel] = useState("");
+  const [deptMap, setDeptMap] = useState<Record<string, { see: boolean; assign: boolean; edit: boolean }>>({});
+  const [allowSelf, setAllowSelf] = useState(false);
+
+  useEffect(() => {
+    // initialize per-department check state when opened or selection changes
+    const map: Record<string, { see: boolean; assign: boolean; edit: boolean }> = {};
+    for (const d of (departments || [])) map[d] = { see: false, assign: false, edit: false };
+    if (sel) {
+      const prof = employees.find((p: any) => p.id === sel);
+      if (prof?.department) {
+        const match = (departments || []).find(d => d.toLowerCase() === (prof.department || '').toLowerCase());
+        if (match) map[match].see = true;
+      }
+    }
+    setDeptMap(map);
+  }, [open, sel, departments, employees]);
+
+  const toggleSee = (d: string) => setDeptMap(prev => ({ ...prev, [d]: { ...(prev[d] || { see: false, assign: false, edit: false }), see: !prev[d]?.see } }));
+  const toggleAssign = (d: string) => setDeptMap(prev => ({ ...prev, [d]: { ...(prev[d] || { see: false, assign: false, edit: false }), assign: !prev[d]?.assign } }));
+  const toggleEdit = (d: string) => setDeptMap(prev => ({ ...prev, [d]: { ...(prev[d] || { see: false, assign: false, edit: false }), edit: !prev[d]?.edit } }));
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className="h-9 gap-2 border-slate-200 bg-slate-50/10 text-slate-700 hover:bg-slate-50">Add Person Override</Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80 p-4">
+        <div className="space-y-4">
+          <Label className="text-[10px] uppercase font-bold text-muted-foreground">Select Person</Label>
+          <select
+            className="w-full h-9 rounded-md border border-input bg-background px-3 text-sm"
+            value={sel}
+            onChange={e => setSel(e.target.value)}
+          >
+            <option value="">Choose person...</option>
+            {employees.map(p => <option key={p.id} value={p.id}>{p.name} — {p.department || 'No Dept'}</option>)}
+          </select>
+
+          <div>
+            <Label className="text-[10px] uppercase font-bold text-muted-foreground mb-2">Departments (View / Assign / Profile Edit)</Label>
+            <div className="grid grid-cols-1 gap-1 max-h-40 overflow-y-auto p-1 border rounded">
+              {(departments || []).map(d => (
+                <div key={d} className="flex items-center justify-between text-sm">
+                  <div className="truncate">{d}</div>
+                  <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-1 text-xs">
+                      <input type="checkbox" checked={!!deptMap[d]?.see} onChange={() => toggleSee(d)} />
+                      <span className="text-[11px]">See</span>
+                    </label>
+                    <label className="flex items-center gap-1 text-xs">
+                      <input type="checkbox" checked={!!deptMap[d]?.assign} onChange={() => toggleAssign(d)} />
+                      <span className="text-[11px]">Assign</span>
+                    </label>
+                    <label className="flex items-center gap-1 text-xs">
+                      <input type="checkbox" checked={!!deptMap[d]?.edit} onChange={() => toggleEdit(d)} />
+                      <span className="text-[11px]">Profile Edit</span>
+                    </label>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <label className="flex items-center gap-2 text-sm">
+            <input type="checkbox" checked={allowSelf} onChange={() => setAllowSelf(s => !s)} />
+            <span className="text-[13px]">Allow assign to self</span>
+          </label>
+
+          <Button
+            className="w-full bg-primary text-white"
+            disabled={!sel}
+            onClick={() => {
+              const sees = Object.keys(deptMap).filter(k => deptMap[k]?.see);
+              const assignable = Object.keys(deptMap).filter(k => deptMap[k]?.assign);
+              const editable = Object.keys(deptMap).filter(k => deptMap[k]?.edit);
+              const settings: any = {
+                sees: sees.length ? sees : [(employees.find((p: any) => p.id === sel)?.department || '')].filter(Boolean),
+                sees_jobs: true,
+                sees_profiles: true,
+                can_assign_tasks: assignable.length > 0,
+                assignable_depts: assignable,
+                can_assign_self: !!allowSelf,
+                can_edit_profiles: editable.length > 0,
+                editable_depts: editable,
+                manages_depts: []
+              };
+              onAdd(sel, settings);
+              setSel("");
+              setOpen(false);
+            }}
+          >
+            Create Override
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function AccessMatrix({ 
   departments, 
   value, 
@@ -1095,24 +1227,46 @@ function AccessMatrix({
   const { profile } = useApp();
   const isSuperAdmin = profile?.role === 'superadmin';
 
+  const { data: allProfiles = [] } = useProfiles();
+
   // Filter keys based on type and management permissions
   const filteredKeys = useMemo(() => {
-    const keys = type === 'dept' 
-      ? [...departments] 
+    const keys = type === 'dept'
+      ? [...departments]
       : Object.keys(value).filter(k => !departments.includes(k));
 
-    let result = keys.sort((a, b) => a.localeCompare(b));
+    // Put person-specific overrides (profile:...) first, then role overrides
+    const personKeys = keys.filter(k => k.startsWith('profile:'));
+    const roleKeys = keys.filter(k => !k.startsWith('profile:'));
+
+    const personKeysSorted = personKeys.sort((a, b) => {
+      const aId = a.split(':')[1];
+      const bId = b.split(':')[1];
+      const aName = (allProfiles.find((p: any) => p.id === aId)?.name || aId).toLowerCase();
+      const bName = (allProfiles.find((p: any) => p.id === bId)?.name || bId).toLowerCase();
+      return aName.localeCompare(bName);
+    });
+
+    const roleKeysSorted = roleKeys.sort((a, b) => a.localeCompare(b));
+
+    let result = [...personKeysSorted, ...roleKeysSorted];
 
     // FILTERING LOGIC: If not superadmin, only show keys they manage
     if (currentUserManagedDepts) {
       result = result.filter(k => {
+        if (k.startsWith('profile:')) {
+          const id = k.split(':')[1];
+          const prof = allProfiles.find((p: any) => p.id === id);
+          const dept = (prof?.department || '').toLowerCase();
+          return currentUserManagedDepts.map(d => d.toLowerCase()).includes(dept);
+        }
         const [dept] = k.split(':');
-        return currentUserManagedDepts.includes(dept);
+        return currentUserManagedDepts.map(d => d.toLowerCase()).includes((dept || '').toLowerCase());
       });
     }
 
     return result;
-  }, [departments, value, currentUserManagedDepts, type]);
+  }, [departments, value, currentUserManagedDepts, type, allProfiles]);
 
   if (filteredKeys.length === 0 && type === 'role') {
     return (
@@ -1128,18 +1282,58 @@ function AccessMatrix({
     onChange(newVal);
   };
 
+  const HeaderHelp = ({ label, help }: { label: string; help: string }) => (
+    <div className="inline-flex items-center gap-1">
+      <span>{label}</span>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            className="text-muted-foreground hover:text-foreground transition-colors cursor-help"
+            aria-label={`${label} help`}
+          >
+            <HelpCircle className="h-3 w-3" />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent>{help}</TooltipContent>
+      </Tooltip>
+    </div>
+  );
+
   return (
-    <div className="space-y-4">
-      <table className="w-full text-[11px] border-collapse">
+    <TooltipProvider delayDuration={100}>
+      <div className="space-y-4">
+        <table className="w-full text-[11px] border-collapse">
         <thead>
           <tr className="bg-muted/50 border-y">
             <th className="px-3 py-2 text-left font-semibold w-40">{type === 'dept' ? 'Viewer Department' : 'Specific Role (Dept:Job)'}</th>
-            <th className="px-3 py-2 text-left font-semibold">Visible Departments</th>
-            <th className="px-3 py-2 text-center font-semibold w-16">Jobs?</th>
-            <th className="px-3 py-2 text-center font-semibold w-16">Profiles?</th>
-            <th className="px-3 py-2 text-center font-semibold w-16 text-primary">Control Access?</th>
-            <th className="px-3 py-2 text-center font-semibold w-16 text-primary">Can Edit?</th>
-            <th className="px-3 py-2 text-left font-semibold w-48 text-primary">Managed Depts</th>
+            <th className="px-3 py-2 text-left font-semibold">
+              <HeaderHelp label="Visible Departments" help="Departments this viewer can see in lists and search." />
+            </th>
+            <th className="px-3 py-2 text-center font-semibold w-16">
+              <HeaderHelp label="Jobs?" help="Show job titles for visible people." />
+            </th>
+            <th className="px-3 py-2 text-center font-semibold w-16">
+              <HeaderHelp label="Profiles?" help="Allow opening profile details (eye button)." />
+            </th>
+            <th className="px-3 py-2 text-center font-semibold w-16">
+              <HeaderHelp label="Assign?" help="Allow assigning tasks to selected departments." />
+            </th>
+            <th className="px-3 py-2 text-center font-semibold w-24">
+              <HeaderHelp label="Profile Edit?" help="Allow editing profiles in the selected departments." />
+            </th>
+            <th className="px-3 py-2 text-center font-semibold w-16">
+              <HeaderHelp label="Self?" help="Allow assigning tasks to yourself." />
+            </th>
+            <th className="px-3 py-2 text-center font-semibold w-16 text-primary">
+              <HeaderHelp label="Control Access?" help="Allow opening the Control Center." />
+            </th>
+            <th className="px-3 py-2 text-center font-semibold w-16 text-primary">
+              <HeaderHelp label="Can Edit?" help="Allow saving changes in Control Center." />
+            </th>
+            <th className="px-3 py-2 text-left font-semibold w-48 text-primary">
+              <HeaderHelp label="Managed Depts" help="Departments this viewer can manage (roles/rankings)." />
+            </th>
             <th className="px-3 py-2 w-8"></th>
           </tr>
         </thead>
@@ -1147,6 +1341,7 @@ function AccessMatrix({
           {filteredKeys.map(key => {
             const settings = value[key] || { sees: [key], sees_jobs: true, sees_profiles: true };
             const isCustom = type === 'role';
+            const isPersonKey = key.startsWith('profile:');
 
             const toggleDept = (dept: string) => {
               if (!canEdit) return;
@@ -1161,6 +1356,28 @@ function AccessMatrix({
               onChange({ ...value, [key]: { ...settings, [field]: !settings[field] } });
             };
 
+            const toggleAssignTasks = () => {
+              if (!canEdit) return;
+              const next = !settings.can_assign_tasks;
+              if (type === 'dept') {
+                const nextAssignable = next ? [key] : [];
+                onChange({ ...value, [key]: { ...settings, can_assign_tasks: next, assignable_depts: nextAssignable } });
+                return;
+              }
+              onChange({ ...value, [key]: { ...settings, can_assign_tasks: next } });
+            };
+
+            const toggleEditProfiles = () => {
+              if (!canEdit) return;
+              const next = !settings.can_edit_profiles;
+              if (type === 'dept') {
+                const nextEditable = next ? [key] : [];
+                onChange({ ...value, [key]: { ...settings, can_edit_profiles: next, editable_depts: nextEditable } });
+                return;
+              }
+              onChange({ ...value, [key]: { ...settings, can_edit_profiles: next } });
+            };
+
             const toggleManagedDept = (dept: string) => {
               if (!canEdit) return;
               const current = settings.manages_depts || [];
@@ -1170,11 +1387,15 @@ function AccessMatrix({
               onChange({ ...value, [key]: { ...settings, manages_depts: next } });
             };
 
+            const displayLabel = isPersonKey
+              ? (allProfiles.find((p: any) => p.id === key.split(':')[1])?.name || key)
+              : key;
+
             return (
               <tr key={key} className="border-b hover:bg-muted/5 transition-colors">
                 <td className="px-3 py-3 align-top">
                   <div className={cn("font-bold", isCustom ? "text-orange-600" : "text-primary")}>
-                    {key}
+                    {displayLabel}
                   </div>
                 </td>
                 <td className="px-3 py-3 align-top">
@@ -1211,6 +1432,127 @@ function AccessMatrix({
                     disabled={!canEdit}
                     checked={!!settings.sees_profiles}
                     onChange={() => toggleBool('sees_profiles')}
+                    className="h-3 w-3 rounded border-gray-300 text-primary"
+                  />
+                </td>
+                <td className="px-3 py-3 text-center align-top">
+                  <div className="flex items-center justify-center gap-2">
+                    <input
+                      type="checkbox"
+                      disabled={!canEdit}
+                      checked={!!settings.can_assign_tasks}
+                      onChange={toggleAssignTasks}
+                      className="h-3 w-3 rounded border-gray-300 text-primary"
+                    />
+                    {type !== 'dept' && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={!canEdit}
+                            className={cn(
+                              "text-[11px] px-2 py-1 rounded border text-muted-foreground",
+                              !canEdit && "opacity-40 cursor-not-allowed"
+                            )}
+                            title="Edit assignable departments"
+                          >
+                            Depts
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-44 p-3">
+                          <div className="space-y-2 text-sm">
+                            <div className="text-xs text-muted-foreground">Assignable Departments</div>
+                            <div className="grid gap-1 max-h-40 overflow-y-auto">
+                              {departments.map(target => {
+                                const assigned = (settings.assignable_depts || []).includes(target);
+                                return (
+                                  <label key={target} className="flex items-center justify-between gap-2">
+                                    <span className="truncate">{target}</span>
+                                    <input
+                                      type="checkbox"
+                                      disabled={!canEdit}
+                                      checked={assigned}
+                                      onChange={() => {
+                                        if (!canEdit) return;
+                                        const current = settings.assignable_depts || [];
+                                        const next = current.includes(target)
+                                          ? current.filter((d: string) => d !== target)
+                                          : [...current, target];
+                                        onChange({ ...value, [key]: { ...settings, assignable_depts: next } });
+                                      }}
+                                    />
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                </td>
+                <td className="px-3 py-3 text-center align-top">
+                  <div className="flex items-center justify-center gap-2">
+                    <input
+                      type="checkbox"
+                      disabled={!canEdit}
+                      checked={!!settings.can_edit_profiles}
+                      onChange={toggleEditProfiles}
+                      className="h-3 w-3 rounded border-gray-300 text-primary"
+                    />
+                    {type !== 'dept' && (
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <button
+                            type="button"
+                            disabled={!canEdit}
+                            className={cn(
+                              "text-[11px] px-2 py-1 rounded border text-muted-foreground",
+                              !canEdit && "opacity-40 cursor-not-allowed"
+                            )}
+                            title="Edit editable departments"
+                          >
+                            Depts
+                          </button>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-44 p-3">
+                          <div className="space-y-2 text-sm">
+                            <div className="text-xs text-muted-foreground">Editable Departments</div>
+                            <div className="grid gap-1 max-h-40 overflow-y-auto">
+                              {departments.map(target => {
+                                const canEditDept = (settings.editable_depts || []).includes(target);
+                                return (
+                                  <label key={target} className="flex items-center justify-between gap-2">
+                                    <span className="truncate">{target}</span>
+                                    <input
+                                      type="checkbox"
+                                      disabled={!canEdit}
+                                      checked={canEditDept}
+                                      onChange={() => {
+                                        if (!canEdit) return;
+                                        const current = settings.editable_depts || [];
+                                        const next = current.includes(target)
+                                          ? current.filter((d: string) => d !== target)
+                                          : [...current, target];
+                                        onChange({ ...value, [key]: { ...settings, editable_depts: next } });
+                                      }}
+                                    />
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+                </td>
+                <td className="px-3 py-3 text-center align-top">
+                  <input
+                    type="checkbox"
+                    disabled={!canEdit}
+                    checked={!!settings.can_assign_self}
+                    onChange={() => toggleBool('can_assign_self')}
                     className="h-3 w-3 rounded border-gray-300 text-primary"
                   />
                 </td>
@@ -1263,8 +1605,9 @@ function AccessMatrix({
             );
           })}
         </tbody>
-      </table>
-    </div>
+        </table>
+      </div>
+    </TooltipProvider>
   );
 }
 
