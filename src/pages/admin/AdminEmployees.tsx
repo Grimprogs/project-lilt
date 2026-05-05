@@ -1317,7 +1317,7 @@ function AccessMatrix({
               <HeaderHelp label="Profiles?" help="Allow opening profile details (eye button)." />
             </th>
             <th className="px-3 py-2 text-center font-semibold w-16">
-              <HeaderHelp label="Assign?" help="Allow assigning tasks to selected departments." />
+              <HeaderHelp label="Assign?" help="Allow assigning tasks to allowed departments." />
             </th>
             <th className="px-3 py-2 text-center font-semibold w-24">
               <HeaderHelp label="Profile Edit?" help="Allow editing profiles in the selected departments." />
