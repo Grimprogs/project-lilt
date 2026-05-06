@@ -49,8 +49,17 @@ export function canManage(currentAdmin: any, target: any, myGrants: DepartmentGr
   if (target.role === 'superadmin') return false; // Cannot manage superadmin
 
   const targetDeptName = target.department || departments.find(d => d.id === target.department_id)?.name || "";
+  const targetJobTitle = target.job_title || "";
   const settings = getVisibilitySettings(currentAdmin, visibility) || { sees: [], sees_jobs: false, sees_profiles: false };
   const editable = (settings.editable_depts || []).map((d: string) => d.toLowerCase());
+
+  // Check Job Title restriction (seniority/rank)
+  // If they have a specific list of jobs they can manage, the target must be in that list
+  if (settings.creatable_jobs && settings.creatable_jobs.length > 0) {
+    if (targetJobTitle && !settings.creatable_jobs.map(j => j.toLowerCase()).includes(targetJobTitle.toLowerCase())) {
+      return false; // Target has a job title this admin isn't allowed to manage
+    }
+  }
 
   if (settings.can_edit_profiles) {
     // If specific departments are listed, only those are editable
@@ -91,19 +100,34 @@ export function canSeeJobTitle(currentAdmin: any, target: any, myGrants: Departm
   return true; // Simplified for now
 }
 
-/** Can this user create a new profile with the given role? */
+/** Can this user create a new profile? */
 export function canCreateProfile(
   currentAdmin: any,
   targetRole: 'employee' | 'admin',
+  targetDept: string | null,
+  targetJob: string | null,
   visibility: VisibilityMap
 ): boolean {
   if (!currentAdmin) return false;
   if (currentAdmin.role === 'superadmin') return true;
   const settings = getVisibilitySettings(currentAdmin, visibility);
   if (!settings?.can_create_profiles) return false;
-  // If creatable_roles is set, check it; default = employee only
-  const allowed = settings.creatable_roles || ['employee'];
-  return allowed.includes(targetRole);
+  
+  // 1. Role check
+  const allowedRoles = settings.creatable_roles || ['employee'];
+  if (!allowedRoles.includes(targetRole)) return false;
+
+  // 2. Dept check
+  if (targetDept && settings.creatable_depts && settings.creatable_depts.length > 0) {
+    if (!settings.creatable_depts.map(d => d.toLowerCase()).includes(targetDept.toLowerCase())) return false;
+  }
+
+  // 3. Job check
+  if (targetJob && settings.creatable_jobs && settings.creatable_jobs.length > 0) {
+    if (!settings.creatable_jobs.map(j => j.toLowerCase()).includes(targetJob.toLowerCase())) return false;
+  }
+
+  return true;
 }
 
 /** Can this user delete the target profile? */

@@ -309,6 +309,7 @@ export default function AdminControlCenter() {
                       currentUserManagedDepts={currentUserManagedDepts}
                       type="dept"
                       employees={employees}
+                      rankings={rankingsForm}
                     />
                   </div>
                 </TabsContent>
@@ -323,6 +324,7 @@ export default function AdminControlCenter() {
                       currentUserManagedDepts={currentUserManagedDepts}
                       type="role"
                       employees={employees}
+                      rankings={rankingsForm}
                     />
                   </div>
                 </TabsContent>
@@ -559,7 +561,8 @@ function AccessMatrix({
   canEdit = true,
   currentUserManagedDepts,
   type = 'dept',
-  employees
+  employees,
+  rankings
 }: {
   departments: string[],
   value: VisibilityMap,
@@ -567,7 +570,8 @@ function AccessMatrix({
   canEdit?: boolean,
   currentUserManagedDepts?: string[] | null,
   type?: 'dept' | 'role',
-  employees: any[]
+  employees: any[],
+  rankings: Rankings
 }) {
   const { profile } = useApp();
   const isSuperAdmin = profile?.role === 'superadmin';
@@ -652,8 +656,8 @@ function AccessMatrix({
   );
 
   // Reusable dept picker popover used in multiple columns
-  const DeptPicker = ({ title, selected, onToggle, disabled }: {
-    title: string; selected: string[]; onToggle: (d: string) => void; disabled?: boolean;
+  const DeptPicker = ({ title, selected, onToggle, disabled, triggerLabel }: {
+    title: string; selected: string[]; onToggle: (d: string) => void; disabled?: boolean; triggerLabel?: string;
   }) => (
     <Popover>
       <PopoverTrigger asChild>
@@ -666,7 +670,7 @@ function AccessMatrix({
             disabled && "opacity-40 cursor-not-allowed"
           )}
         >
-          {selected.length > 0 ? `${selected.length}d` : "Depts"}
+          {selected.length > 0 ? `${selected.length}d` : (triggerLabel || "Depts")}
         </button>
       </PopoverTrigger>
       <PopoverContent className="w-48 p-3 z-[200]" side="right">
@@ -830,36 +834,88 @@ function AccessMatrix({
                 if (!canEdit) return;
                 onChange({ ...value, [key]: { ...settings, can_create_profiles: !settings.can_create_profiles } });
               }} className="h-3 w-3" />
-            {/* Role picker: which roles can they create */}
-            <Popover>
-              <PopoverTrigger asChild>
-                <button type="button" disabled={!canEdit} className={cn(
-                  "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
-                  (settings.creatable_roles || []).length > 0 ? "border-green-500/40 bg-green-500/10 text-green-700" : "border-muted text-muted-foreground",
-                  !canEdit && "opacity-40 cursor-not-allowed"
-                )}>
-                  {(settings.creatable_roles || ['emp']).join('+').slice(0,6)}
-                </button>
-              </PopoverTrigger>
-              <PopoverContent className="w-44 p-3 z-[200]" side="right">
-                <div className="space-y-2">
-                  <div className="text-xs font-semibold text-muted-foreground uppercase">Max Role to Create</div>
-                  {(['employee', 'admin'] as const).map(role => (
-                    <label key={role} className="flex items-center justify-between gap-2 text-xs hover:bg-muted/40 px-1 rounded">
-                      <span className="capitalize">{role}</span>
-                      <input type="checkbox" disabled={!canEdit}
-                        checked={(settings.creatable_roles || ['employee']).includes(role)}
-                        onChange={() => {
-                          if (!canEdit) return;
-                          const cur = settings.creatable_roles || ['employee'];
-                          const next = cur.includes(role) ? cur.filter(r => r !== role) : [...cur, role];
-                          onChange({ ...value, [key]: { ...settings, creatable_roles: next } });
-                        }} className="h-3 w-3" />
-                    </label>
-                  ))}
-                </div>
-              </PopoverContent>
-            </Popover>
+            
+            <div className="flex flex-col gap-1 w-full max-w-[80px]">
+              {/* Role picker */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" disabled={!canEdit} className={cn(
+                    "text-[9px] px-1 py-0.5 rounded border transition-colors truncate",
+                    (settings.creatable_roles || []).length > 0 ? "border-green-500/40 bg-green-500/10 text-green-700" : "border-muted text-muted-foreground",
+                    !canEdit && "opacity-40 cursor-not-allowed"
+                  )}>
+                    Roles: {(settings.creatable_roles || ['emp']).join('+')}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-44 p-3 z-[200]" side="right">
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase text-[10px]">Max Role to Create</div>
+                    {(['employee', 'admin'] as const).map(role => (
+                      <label key={role} className="flex items-center justify-between gap-2 text-xs hover:bg-muted/40 px-1 rounded cursor-pointer">
+                        <span className="capitalize">{role}</span>
+                        <input type="checkbox" disabled={!canEdit}
+                          checked={(settings.creatable_roles || ['employee']).includes(role)}
+                          onChange={() => {
+                            if (!canEdit) return;
+                            const cur = settings.creatable_roles || ['employee'];
+                            const next = cur.includes(role) ? cur.filter(r => r !== role) : [...cur, role];
+                            onChange({ ...value, [key]: { ...settings, creatable_roles: next } });
+                          }} className="h-3 w-3" />
+                      </label>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Dept picker for creation */}
+              <DeptPicker
+                title="Creatable Departments"
+                selected={settings.creatable_depts || []}
+                onToggle={(d) => {
+                  if (!canEdit) return;
+                  const cur = settings.creatable_depts || [];
+                  const next = cur.includes(d) ? cur.filter(x => x !== d) : [...cur, d];
+                  onChange({ ...value, [key]: { ...settings, creatable_depts: next } });
+                }}
+                disabled={!canEdit}
+                triggerLabel="Depts"
+              />
+
+              {/* Job picker for creation */}
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button type="button" disabled={!canEdit} className={cn(
+                    "text-[9px] px-1 py-0.5 rounded border transition-colors truncate",
+                    (settings.creatable_jobs || []).length > 0 ? "border-green-500/40 bg-green-500/10 text-green-700" : "border-muted text-muted-foreground",
+                    !canEdit && "opacity-40 cursor-not-allowed"
+                  )}>
+                    Jobs: {(settings.creatable_jobs || []).length > 0 ? settings.creatable_jobs?.length : 'All'}
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent className="w-56 p-3 z-[200]" side="right">
+                  <div className="space-y-2">
+                    <div className="text-xs font-semibold text-muted-foreground uppercase text-[10px]">Creatable Job Titles</div>
+                    <div className="max-h-[200px] overflow-y-auto space-y-1 pr-1">
+                      {rankings.jobTitles.map(title => (
+                        <label key={title} className="flex items-center justify-between gap-2 text-xs hover:bg-muted/40 px-1 rounded cursor-pointer">
+                          <span className="truncate">{title}</span>
+                          <input type="checkbox" disabled={!canEdit}
+                            checked={(settings.creatable_jobs || []).includes(title)}
+                            onChange={() => {
+                              if (!canEdit) return;
+                              const cur = settings.creatable_jobs || [];
+                              const next = cur.includes(title) ? cur.filter(t => t !== title) : [...cur, title];
+                              onChange({ ...value, [key]: { ...settings, creatable_jobs: next } });
+                            }} className="h-3 w-3" />
+                        </label>
+                      ))}
+                      {rankings.jobTitles.length === 0 && <div className="text-[10px] italic text-muted-foreground text-center">No jobs defined.</div>}
+                    </div>
+                    <div className="text-[9px] text-muted-foreground border-t pt-1 mt-1">If none selected, all jobs are allowed.</div>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
           </div>
         </td>
         {/* Delete profiles */}

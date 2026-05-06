@@ -25,6 +25,8 @@ export type VisibilityMap = Record<string, {
   // Profile CREATE permission
   can_create_profiles?: boolean; // can add new employees
   creatable_roles?: ('employee' | 'admin')[]; // which roles they can create (default: employee only)
+  creatable_depts?: string[]; // which departments they can create users in
+  creatable_jobs?: string[]; // specific job titles they are allowed to assign
   // Profile UPDATE permission
   can_edit_profiles?: boolean; // can edit profiles in editable_depts
   editable_depts?: string[]; // departments they can edit profiles in

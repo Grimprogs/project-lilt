@@ -43,8 +43,8 @@ export default function AdminEmployees() {
   const currentSettings = profile ? getVisibilitySettings(profile, accessVisibility) : null;
 
   // Granular create/delete permissions from accessVisibility matrix
-  const canAddEmployee = isSuperAdmin || canCreateProfile(profile, 'employee', accessVisibility);
-  const canAddAdmin = isSuperAdmin || canCreateProfile(profile, 'admin', accessVisibility);
+  const canAddEmployee = isSuperAdmin || canCreateProfile(profile, 'employee', null, null, accessVisibility);
+  const canAddAdmin = isSuperAdmin || canCreateProfile(profile, 'admin', null, null, accessVisibility);
   const creatableRoles = isSuperAdmin
     ? ['employee', 'admin', 'superadmin']
     : (currentSettings?.creatable_roles || (canAddEmployee ? ['employee'] : []));
@@ -107,31 +107,59 @@ export default function AdminEmployees() {
     if (!profile) return sourceNames;
     if (isSuperAdmin) return sourceNames;
 
-    // Non-superadmins may see departments they have grants for OR departments granted by their role-specific accessVisibility overrides
-    const editableDeptIds = new Set(myGrants.filter(g => g.can_update_role || g.can_create_role).map(g => g.department_id));
-    const editableNamesFromGrants = departmentsData.filter(d => editableDeptIds.has(d.id)).map(d => d.name);
+    const currentSettings = getVisibilitySettings(profile, accessVisibility);
+    
+    // Departments allowed based on action (Edit vs Create)
+    const allowedDepts = editing 
+      ? (currentSettings?.editable_depts || []) 
+      : (currentSettings?.creatable_depts || []);
 
+    // Also include departments they have direct grants for
+    const grantDeptIds = new Set(myGrants.filter(g => editing ? g.can_update_role : g.can_create_role).map(g => g.department_id));
+    const grantNames = departmentsData.filter(d => grantDeptIds.has(d.id)).map(d => d.name);
+
+    // Merge with managed depts
     const managedByRole = Array.isArray(currentSettings?.manages_depts) ? currentSettings!.manages_depts : [];
 
-    const editableNames = Array.from(new Set([...editableNamesFromGrants, ...managedByRole]));
+    const finalAllowed = Array.from(new Set([...allowedDepts, ...grantNames, ...managedByRole]));
 
-    return sourceNames.filter(n => editableNames.includes(n));
-  }, [rankings.departments, departmentsData, departments, profile, isSuperAdmin, myGrants]);
+    // If no specific restrictions set, fallback to what they can "see" or just return source if they have the global permission
+    if (finalAllowed.length === 0) {
+      if (editing && currentSettings?.can_edit_profiles) return sourceNames;
+      if (!editing && currentSettings?.can_create_profiles) return sourceNames;
+      return [];
+    }
+
+    return sourceNames.filter(n => finalAllowed.map(d => d.toLowerCase()).includes(n.toLowerCase()));
+  }, [rankings.departments, departmentsData, departments, profile, isSuperAdmin, myGrants, accessVisibility, editing]);
 
   const availableJobOptions = useMemo(() => {
     const deptName = form.department || profile?.department;
     if (!deptName) return [];
-    // Prefer department-specific role list; do NOT fall back to a global ranking
+    
+    // 1. Get all jobs for this department
     const deptJobs = (rankings.deptToJobs && rankings.deptToJobs[deptName]) ? rankings.deptToJobs[deptName] : [];
+    
+    if (isSuperAdmin) return deptJobs;
+
+    // 2. Filter by creatable_jobs if restricted
+    const currentSettings = getVisibilitySettings(profile, accessVisibility);
+    const allowedJobs = currentSettings?.creatable_jobs || [];
+    
+    if (allowedJobs.length > 0) {
+      return deptJobs.filter(j => allowedJobs.map(aj => aj.toLowerCase()).includes(j.toLowerCase()));
+    }
+
     return deptJobs;
-  }, [rankings.deptToJobs, form.department, profile?.department]);
+  }, [rankings.deptToJobs, form.department, profile?.department, isSuperAdmin, accessVisibility, profile]);
 
   // For UI: determine whether the current user can create roles in the department selected in the form
-  const selectedFormDeptObj = departmentsData.find(d => form.department && d.name && form.department && d.name.toLowerCase() === form.department.toLowerCase());
+  const selectedFormDeptObj = departmentsData.find(d => form.department && d.name && d.name.toLowerCase() === form.department.toLowerCase());
   const selectedFormDeptId = selectedFormDeptObj?.id;
   const canCreateRoleForSelectedDept = isSuperAdmin
     || myGrants.some(g => g.department_id === selectedFormDeptId && g.can_create_role)
-    || (Array.isArray(currentSettings?.manages_depts) && form.department && currentSettings!.manages_depts.map(s => s.toLowerCase()).includes(form.department.toLowerCase()));
+    || (Array.isArray(currentSettings?.manages_depts) && form.department && currentSettings!.manages_depts.map(s => s.toLowerCase()).includes(form.department.toLowerCase()))
+    || (Array.isArray(currentSettings?.creatable_depts) && form.department && currentSettings!.creatable_depts.map(s => s.toLowerCase()).includes(form.department.toLowerCase()));
 
   const filteredAndSorted = useMemo(() => {
     const filtered = employees.filter(e => {
