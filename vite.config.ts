@@ -20,19 +20,26 @@ export default defineConfig(({ mode }) => ({
       registerType: 'autoUpdate',
       manifest: {
         name: 'Z-Tasksforce',
-        short_name: 'Z-Tasksforce',
+        short_name: 'ZTasks',
         description: 'Modern Task Management Workspace for Elite Teams',
         theme_color: '#000000',
+        background_color: '#0a0a0a',
+        display: 'standalone',
+        orientation: 'portrait',
+        start_url: '/',
+        scope: '/',
         icons: [
           {
             src: '/ztasks-logo.jpg',
             sizes: '192x192',
-            type: 'image/jpeg'
+            type: 'image/jpeg',
+            purpose: 'any'
           },
           {
             src: '/ztasks-logo.jpg',
             sizes: '512x512',
-            type: 'image/jpeg'
+            type: 'image/jpeg',
+            purpose: 'any maskable'
           }
         ]
       }
