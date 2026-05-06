@@ -69,7 +69,7 @@ describe('RLS: Admin login + data access', () => {
 
   beforeAll(async () => {
     // Sign in as admin — update these to match your Supabase admin user
-    const ADMIN_EMAIL = 'admin@ztasks.io';   // ← your admin user email
+    const ADMIN_EMAIL = 'admin@zeexai.com';   // ← your admin user email
     const ADMIN_PASSWORD = 'admin123';        // ← your admin password
 
     const { data, error } = await supabase.auth.signInWithPassword({

@@ -41,8 +41,8 @@ export default function Login({ role }: { role: Role }) {
       <div className="absolute inset-0 -z-10" aria-hidden />
       <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
         <Link to="/" className="flex items-center gap-2.5">
-          <img src="/ztasks-logo.jpg" alt="ZTasks Logo" className="h-9 w-9 rounded-xl object-cover shadow-glow" />
-          <span className="font-display text-xl font-bold">ZTasks</span>
+          <img src="/ztasks-logo.jpg" alt="Z-Tasksforce Logo" className="h-9 w-9 rounded-xl object-cover shadow-glow" />
+          <span className="font-display text-xl font-bold">Z-Tasksforce</span>
         </Link>
         <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Back
@@ -69,7 +69,7 @@ export default function Login({ role }: { role: Role }) {
                 type="email"
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="you@ztasks.io"
+                placeholder="you@zeexai.com"
                 autoComplete="email"
                 required
               />

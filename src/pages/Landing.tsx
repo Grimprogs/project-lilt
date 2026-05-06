@@ -16,10 +16,10 @@ export default function Landing() {
   return (
     <div className="relative min-h-screen overflow-hidden hero-bg">
       <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-        <div className="flex items-center gap-2.5">
-          <img src="/ztasks-logo.jpg" alt="ZTasks Logo" className="h-9 w-9 rounded-xl object-cover shadow-glow" />
-          <span className="font-display text-xl font-bold">ZTasks</span>
-        </div>
+        <Link to="/" className="flex items-center gap-2.5">
+          <img src="/ztasks-logo.jpg" alt="Z-Tasksforce Logo" className="h-9 w-9 rounded-xl object-cover shadow-glow" />
+          <span className="font-display text-xl font-bold">Z-Tasksforce</span>
+        </Link>
         <nav className="hidden items-center gap-6 text-sm md:flex">
           <a className="story-link text-muted-foreground hover:text-foreground" href="#features">Features</a>
           <a className="story-link text-muted-foreground hover:text-foreground" href="#roles">Roles</a>

@@ -1,51 +1,48 @@
 import { Link, useParams, useNavigate } from "react-router-dom";
-import { useProfile } from "@/hooks/useProfiles";
+import { useProfile, useUpdateProfile } from "@/hooks/useProfiles";
 import { useTasks } from "@/hooks/useTasks";
-import { useRankings } from "@/hooks/useSettings";
+import { useRankings, useVisibilitySettings } from "@/hooks/useSettings";
+import { useDepartments, useMyDepartmentGrants } from "@/hooks/useDepartments";
 import { UserAvatar } from "@/components/UserAvatar";
 import { TaskCard } from "@/components/TaskCard";
-import { ArrowLeft, Mail, Building2, CalendarDays, CheckCircle2, Clock, AlertTriangle, Download, Zap, Timer, TrendingUp, ShieldAlert } from "lucide-react";
+import { ArrowLeft, Mail, Building2, CalendarDays, CheckCircle2, Clock, AlertTriangle, Download, Zap, Timer, TrendingUp, ShieldAlert, Pencil } from "lucide-react";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
 import { downloadCSV, calculateTaskDuration } from "@/lib/csv-export";
 import { formatDue } from "@/lib/task-utils";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { canViewProfile, getVisibilitySettings } from "@/lib/permissions";
 import {
   ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid
 } from "recharts";
 
-function getRank(item: string | null | undefined, rankedList: string[]) {
-  if (!item) return 9999;
-  const idx = rankedList.findIndex(x => x.toLowerCase() === item.toLowerCase());
-  return idx >= 0 ? idx : 9998;
-}
 
 export default function AdminEmployeeProfile() {
   const { id } = useParams();
   const { data: employee } = useProfile(id);
   const { user, profile } = useApp();
   const { data: rankings = { departments: [], jobTitles: [] } } = useRankings();
+  const { data: visibility = {} } = useVisibilitySettings();
+  const { data: departmentsData = [] } = useDepartments();
+  const { data: myGrants = [] } = useMyDepartmentGrants(profile?.id);
   const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
   const isSuperAdmin = user?.role === 'superadmin';
   const { data: tasks = [] } = useTasks(isAdmin ? { role: "admin" } : undefined);
+  const [editMode, setEditMode] = useState(false);
 
-  // Hierarchy Guard
+  // Matrix-aware canView: respects viewable_profile_depts, sees_profiles, etc.
   const canView = () => {
     if (!profile || !employee) return false;
     if (isSuperAdmin) return true;
     if (profile.id === employee.id) return true;
-
-    const adminDeptRank = getRank(profile.department, rankings.departments);
-    const targetDeptRank = getRank(employee.department, rankings.departments);
-    
-    if (adminDeptRank < targetDeptRank) return true;
-    if (adminDeptRank === targetDeptRank) {
-       const adminJobRank = getRank(profile.job_title, rankings.jobTitles);
-       const targetJobRank = getRank(employee.job_title, rankings.jobTitles);
-       return adminJobRank < targetJobRank;
-    }
-    return false;
+    return canViewProfile(profile, employee, myGrants, departmentsData, visibility);
   };
+
+  // Can this viewer edit their own profile?
+  const mySettings = profile ? getVisibilitySettings(profile, visibility) : null;
+  const canSelfEdit = isSuperAdmin || !!mySettings?.can_edit_self;
+  const isOwnProfile = profile?.id === employee?.id;
+
 
   if (!employee) {
     return (
@@ -108,30 +105,37 @@ export default function AdminEmployeeProfile() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 border-b -mx-4 px-4 pt-2 mb-4 shadow-sm flex items-center justify-between">
         <Link to={isAdmin ? "/admin/employees" : "/me/team"} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
           <ArrowLeft className="h-4 w-4" /> Back to team
         </Link>
-        {isAdmin && (
-           <Button 
-           variant="outline" 
-           size="sm" 
-           onClick={() => {
-             const rows = my.map(t => [
-               t.title, t.priority, t.status, t.due_date,
-               t.started_at ? new Date(t.started_at).toLocaleString() : "—",
-               t.approved_at ? new Date(t.approved_at).toLocaleString() : "—",
-               calculateTaskDuration(t)
-             ]);
-             downloadCSV(`${employee.name.replace(/\s+/g, '_')}_Performance_Full`, 
-               ["Task", "Priority", "Status", "Due Date", "Started At", "Completed At", "Time Taken"], 
-               rows
-             );
-           }}
-         >
-           <Download className="mr-2 h-4 w-4" /> Download Performance Report
-         </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isOwnProfile && canSelfEdit && (
+            <Button variant="outline" size="sm" onClick={() => setEditMode(e => !e)}>
+              <Pencil className="h-4 w-4 mr-1" /> {editMode ? "Cancel Edit" : "Edit My Profile"}
+            </Button>
+          )}
+          {isAdmin && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                const rows = my.map(t => [
+                  t.title, t.priority, t.status, t.due_date,
+                  t.started_at ? new Date(t.started_at).toLocaleString() : "—",
+                  t.approved_at ? new Date(t.approved_at).toLocaleString() : "—",
+                  calculateTaskDuration(t)
+                ]);
+                downloadCSV(`${employee.name.replace(/\s+/g, '_')}_Performance_Full`,
+                  ["Task", "Priority", "Status", "Due Date", "Started At", "Completed At", "Time Taken"],
+                  rows
+                );
+              }}
+            >
+              <Download className="mr-2 h-4 w-4" /> Download Report
+            </Button>
+          )}
+        </div>
       </div>
 
       <div className="surface-card p-6">

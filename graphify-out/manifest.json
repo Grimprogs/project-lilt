@@ -1,498 +1,506 @@
 {
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\eslint.config.js": {
-    "mtime": 1777881043.3515186,
+    "mtime": 1778002056.425647,
     "hash": "bc484741cdf3591af5da7d9f3da3a647"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\postcss.config.js": {
-    "mtime": 1777881043.4904296,
+    "mtime": 1778002056.529486,
     "hash": "33fad9c02cb0ec6d6030369ef6347d57"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\tailwind.config.ts": {
-    "mtime": 1777881043.7403078,
+    "mtime": 1778002056.640575,
     "hash": "247746a404acd9fde8379a72fd57023b"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\vite.config.ts": {
-    "mtime": 1777881043.7463455,
+    "mtime": 1778002056.6425862,
     "hash": "c3331a6c1566fd5c2519b7cec6820698"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\vitest.config.ts": {
-    "mtime": 1777881043.7463455,
+    "mtime": 1778002056.6425862,
     "hash": "cacef4bd5b30865784bb202271047ad6"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\App.tsx": {
-    "mtime": 1777881043.5927312,
-    "hash": "0d3d9bc87fecae152d5d34b1e488527d"
+    "mtime": 1778002722.3203063,
+    "hash": "c05ee01d58edd81816b804ec1b7dc849"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\main.tsx": {
-    "mtime": 1777881043.6797056,
+    "mtime": 1778002056.62293,
     "hash": "3ad492668e71c9fb3069381cb93760ed"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\vite-env.d.ts": {
-    "mtime": 1777881043.7036853,
+    "mtime": 1778002056.6307113,
     "hash": "8f68c27c3fc38817b2726b20e2d4f1ee"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\AppLayout.tsx": {
-    "mtime": 1777881043.594746,
+    "mtime": 1778002056.5877826,
     "hash": "a9ef07c2df833200b470d0a84c73b003"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\NavLink.tsx": {
-    "mtime": 1777881043.5967565,
+    "mtime": 1778002056.5877826,
     "hash": "889a81fd2eb948eb406c9ccabe175918"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\NotificationsPanel.tsx": {
-    "mtime": 1777881043.5967565,
+    "mtime": 1778002056.5877826,
     "hash": "749637b8c67ee884239c8219e7b306c9"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ProtectedRoute.tsx": {
-    "mtime": 1777881043.598771,
+    "mtime": 1778002056.5877826,
     "hash": "e6c40d928b398dc3457cfdd1cc8e6721"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\Sidebar.tsx": {
-    "mtime": 1777881043.598771,
-    "hash": "4b88fceb5244eb6d9d9c503160f4d77b"
+    "mtime": 1778002056.5877826,
+    "hash": "136bc86742d308b808871f0eafde7bc3"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\StatusBadge.tsx": {
-    "mtime": 1777881043.6018467,
+    "mtime": 1778002056.5877826,
     "hash": "7cef1397d716dc25818ea89f4a3a5f3d"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\TaskCard.tsx": {
-    "mtime": 1777881043.6023538,
+    "mtime": 1778002056.5914705,
     "hash": "bf3ce3ff553fe88ac659d0cbfe0ea2ae"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\Topbar.tsx": {
-    "mtime": 1777881043.6023538,
+    "mtime": 1778002056.5914705,
     "hash": "9c2a9152e327215ea19326e38841fbb5"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\UserAvatar.tsx": {
-    "mtime": 1777881043.6043622,
+    "mtime": 1778002056.5914705,
     "hash": "29e4d86f7b8fb023c41f61ac712b743c"
   },
+  "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\WideAppLayout.tsx": {
+    "mtime": 1778002722.316701,
+    "hash": "642f065c4c5c804009aeeed43370c994"
+  },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\accordion.tsx": {
-    "mtime": 1777881043.6049385,
+    "mtime": 1778002056.5914705,
     "hash": "ff8f54b79a7a2bc4fed8c092dd7a1f4b"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\alert-dialog.tsx": {
-    "mtime": 1777881043.607456,
+    "mtime": 1778002056.5934813,
     "hash": "9e4e4984ede953adcc023d60c017a968"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\alert.tsx": {
-    "mtime": 1777881043.607456,
+    "mtime": 1778002056.5934813,
     "hash": "eba34d3096d7c23bcdf5dfb1e725ecff"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\aspect-ratio.tsx": {
-    "mtime": 1777881043.6094708,
+    "mtime": 1778002056.5934813,
     "hash": "14c12661aad8c80328c86a18b506c088"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\avatar.tsx": {
-    "mtime": 1777881043.6112967,
+    "mtime": 1778002056.5934813,
     "hash": "7b447f617f7d654c70050259fbf6dbc0"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\badge.tsx": {
-    "mtime": 1777881043.6112967,
+    "mtime": 1778002056.5934813,
     "hash": "09261d891c581ebf021af2989fe75d60"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\breadcrumb.tsx": {
-    "mtime": 1777881043.6133099,
+    "mtime": 1778002056.5934813,
     "hash": "c277fb2bb0886444a6c8a00296ad924e"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\button.tsx": {
-    "mtime": 1777881043.6148224,
+    "mtime": 1778002056.5934813,
     "hash": "854ce263491269d5b7db6d0828a63f9a"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\calendar.tsx": {
-    "mtime": 1777881043.6148224,
+    "mtime": 1778002056.5934813,
     "hash": "1a2e76319e667991b06dc99e74b9b631"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\card.tsx": {
-    "mtime": 1777881043.6168375,
+    "mtime": 1778002056.596773,
     "hash": "0e2d94c650cf4fae76b4c5e0f14dd858"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\carousel.tsx": {
-    "mtime": 1777881043.6168375,
+    "mtime": 1778002056.596773,
     "hash": "7d3e5a6ed21d4690d498e8a60b52868a"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\chart.tsx": {
-    "mtime": 1777881043.618668,
+    "mtime": 1778002056.596773,
     "hash": "4360d46060e32c8aafbc140a482a03fa"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\checkbox.tsx": {
-    "mtime": 1777881043.618668,
+    "mtime": 1778002056.596773,
     "hash": "76ca6b8de39bdac0ff7620b301077963"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\collapsible.tsx": {
-    "mtime": 1777881043.618668,
+    "mtime": 1778002056.596773,
     "hash": "72fafa9d8b58f83ec9b7c8f141bfdd42"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\command.tsx": {
-    "mtime": 1777881043.621786,
+    "mtime": 1778002056.5987823,
     "hash": "0390099f76c1a9eeb97041c572c752c0"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\context-menu.tsx": {
-    "mtime": 1777881043.6233008,
+    "mtime": 1778002056.5987823,
     "hash": "bf02a92d910af3af76b1e417a76cbd6a"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\dialog.tsx": {
-    "mtime": 1777881043.6233008,
+    "mtime": 1778002056.5987823,
     "hash": "8c4a577dcf79d0ba30c2749f909fa932"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\drawer.tsx": {
-    "mtime": 1777881043.6233008,
+    "mtime": 1778002056.5987823,
     "hash": "a73521d8fbccde731eae7f2f81f5875b"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\dropdown-menu.tsx": {
-    "mtime": 1777881043.6256864,
+    "mtime": 1778002056.5987823,
     "hash": "deab6e248bcccb2e52ad13736bf5952e"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\form.tsx": {
-    "mtime": 1777881043.6256864,
+    "mtime": 1778002056.5987823,
     "hash": "4d27bc8211e0505103bbd930275570c6"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\hover-card.tsx": {
-    "mtime": 1777881043.6256864,
+    "mtime": 1778002056.5987823,
     "hash": "a7927cc49ef796b0c725ecd0869c9f95"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\input-otp.tsx": {
-    "mtime": 1777881043.6291873,
+    "mtime": 1778002056.602339,
     "hash": "7217a7c6bceca8030298e2252204ae40"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\input.tsx": {
-    "mtime": 1777881043.6291873,
+    "mtime": 1778002056.602339,
     "hash": "c9e808ff72f69a97513b516a31d5705a"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\label.tsx": {
-    "mtime": 1777881043.6315074,
+    "mtime": 1778002056.602339,
     "hash": "a8c075269b5971c2ab072603b5166cc2"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\menubar.tsx": {
-    "mtime": 1777881043.6315074,
+    "mtime": 1778002056.602339,
     "hash": "8d6dd42e35e9410e97a725c64c02f0a6"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\navigation-menu.tsx": {
-    "mtime": 1777881043.6315074,
+    "mtime": 1778002056.6043153,
     "hash": "2d91ffeee8627f37b4733949b3373a23"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\pagination.tsx": {
-    "mtime": 1777881043.6344473,
+    "mtime": 1778002056.6043153,
     "hash": "4d09c500f83dd4b754b74d03b79527ba"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\popover.tsx": {
-    "mtime": 1777881043.635291,
+    "mtime": 1778002056.6043153,
     "hash": "63380a8f575f8a1a5277caeb4971919f"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\progress.tsx": {
-    "mtime": 1777881043.6363797,
+    "mtime": 1778002056.6043153,
     "hash": "b0d4b1791f1da120f5eed107f235edce"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\radio-group.tsx": {
-    "mtime": 1777881043.6372683,
+    "mtime": 1778002056.6043153,
     "hash": "6c2a4c39fb3f889fe94b854b7198b5ed"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\resizable.tsx": {
-    "mtime": 1777881043.6372683,
+    "mtime": 1778002056.6043153,
     "hash": "ed49053e380e461e2ca75f7a3fe67236"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\scroll-area.tsx": {
-    "mtime": 1777881043.6392856,
+    "mtime": 1778002056.6043153,
     "hash": "f86e3f716ed7c692309c1a48d85ce2c9"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\select.tsx": {
-    "mtime": 1777881043.6412992,
+    "mtime": 1778002056.6043153,
     "hash": "7a89fad24599af514ca0e28a9f5c4370"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\separator.tsx": {
-    "mtime": 1777881043.6412992,
+    "mtime": 1778002056.60775,
     "hash": "1810b24a008c00cd43c0b5ad9f3e4c6b"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\sheet.tsx": {
-    "mtime": 1777881043.643311,
+    "mtime": 1778002056.60775,
     "hash": "d01d85069ebcb54849277fce060ebfea"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\sidebar.tsx": {
-    "mtime": 1777881043.643311,
+    "mtime": 1778002056.60775,
     "hash": "47158040377f0ab1d4610e976529ef9c"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\skeleton.tsx": {
-    "mtime": 1777881043.6457012,
+    "mtime": 1778002056.60775,
     "hash": "6433d7c535e132083b2c1bcb57373fff"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\slider.tsx": {
-    "mtime": 1777881043.6474407,
+    "mtime": 1778002056.60775,
     "hash": "977286428ad957ed73e428525450f9cb"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\sonner.tsx": {
-    "mtime": 1777881043.6474407,
+    "mtime": 1778002056.609759,
     "hash": "f375774f847d020348cd21d524d28c75"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\switch.tsx": {
-    "mtime": 1777881043.6494553,
+    "mtime": 1778002056.609759,
     "hash": "57fa755b8dcfe75538bc523ac3e0bb0e"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\table.tsx": {
-    "mtime": 1777881043.6521964,
+    "mtime": 1778002056.609759,
     "hash": "d73905fa73678181cb9f8baa91b3f222"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\tabs.tsx": {
-    "mtime": 1777881043.6521964,
+    "mtime": 1778002056.609759,
     "hash": "33c494eaa3811114e89a89fbbb0a1a02"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\textarea.tsx": {
-    "mtime": 1777881043.656238,
+    "mtime": 1778002056.609759,
     "hash": "05d1ec7d6c3a836dc5b28d56935174fd"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\toast.tsx": {
-    "mtime": 1777881043.656238,
+    "mtime": 1778002056.6117706,
     "hash": "0e2ba363f7d8b176dea467284711fea5"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\toaster.tsx": {
-    "mtime": 1777881043.6584535,
+    "mtime": 1778002056.6117706,
     "hash": "0f5d0fdbcc2d4611e59994af4393e27e"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\toggle-group.tsx": {
-    "mtime": 1777881043.6584535,
+    "mtime": 1778002056.6117706,
     "hash": "fc5bff5bf4bb6714e6eaf85dcdeb65b9"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\toggle.tsx": {
-    "mtime": 1777881043.6584535,
+    "mtime": 1778002056.6117706,
     "hash": "2342cfa40b5b31148997f87d1642359e"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\tooltip.tsx": {
-    "mtime": 1777881043.660463,
+    "mtime": 1778002056.6117706,
     "hash": "c050f1e97cf8e200ecf88681073c90cb"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\components\\ui\\use-toast.ts": {
-    "mtime": 1777881043.660463,
+    "mtime": 1778002056.6117706,
     "hash": "5bff9ea3904b15a9e1908b128c88e75f"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\context\\AppContext.tsx": {
-    "mtime": 1777881043.662487,
+    "mtime": 1778002056.613778,
     "hash": "644cef64b0af8272ac229f4441cf5608"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\data\\seed.ts": {
-    "mtime": 1777881043.663438,
+    "mtime": 1778002056.6147842,
     "hash": "75d504340bd57d1aff49faa291bea714"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\hooks\\use-mobile.tsx": {
-    "mtime": 1777881043.663438,
+    "mtime": 1778002056.6147842,
     "hash": "1bb3ebac7752b497a78d34e341975bbd"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\hooks\\use-toast.ts": {
-    "mtime": 1777881043.663438,
+    "mtime": 1778002056.6147842,
     "hash": "895be3e18021c7c5cd4fac68ea522dd4"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\hooks\\useAuth.ts": {
-    "mtime": 1777881043.6674597,
+    "mtime": 1778002056.6147842,
     "hash": "336760365c7c9e57595cbedc517fd64d"
   },
+  "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\hooks\\useDepartments.ts": {
+    "mtime": 1778002056.6147842,
+    "hash": "8abfaef96eb987075f56db97e7dcb165"
+  },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\hooks\\useNotifications.ts": {
-    "mtime": 1777881043.668329,
+    "mtime": 1778002056.6147842,
     "hash": "e990bb5fa6c516eb01b4a5c2a24b98b8"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\hooks\\useProfiles.ts": {
-    "mtime": 1777881043.6689909,
+    "mtime": 1778002056.6147842,
     "hash": "57aae1ecefa2e4b2ff29f9b07ee293af"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\hooks\\useSettings.ts": {
-    "mtime": 1777881043.669924,
-    "hash": "f61e2057ad927c56e8ba84f17d26bcd3"
+    "mtime": 1778002056.6147842,
+    "hash": "0577a4cc2222ac9bf32ccf956ff24e5f"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\hooks\\useTasks.ts": {
-    "mtime": 1777881043.6716776,
+    "mtime": 1778002056.6147842,
     "hash": "5e98fdb80aac9be3540b8b141071fe0f"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\integrations\\supabase\\client.ts": {
-    "mtime": 1777881043.6742265,
+    "mtime": 1778002056.6196053,
     "hash": "067670c9f8c5469bb96acb6d3008c8e9"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\integrations\\supabase\\types.ts": {
-    "mtime": 1777881043.676668,
+    "mtime": 1778002056.6196053,
     "hash": "a3baa1cff03b869a52c7337a6e8036c9"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\lib\\csv-export.ts": {
-    "mtime": 1777881043.6774342,
+    "mtime": 1778002056.6196053,
     "hash": "5ddccde6ca7e47792c9f5db7e582233f"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\lib\\task-utils.ts": {
-    "mtime": 1777881043.6774342,
+    "mtime": 1778002056.6196053,
     "hash": "27fe07192aab2367ba46670e568ff35b"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\lib\\utils.ts": {
-    "mtime": 1777881043.6797056,
+    "mtime": 1778002056.6196053,
     "hash": "e3f848f1b39f863e6164cf58b5a8e752"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\Landing.tsx": {
-    "mtime": 1777881043.681841,
+    "mtime": 1778002056.62293,
     "hash": "e81f2727a673c6446d6eb5ee5311a885"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\Login.tsx": {
-    "mtime": 1777881043.681841,
+    "mtime": 1778002056.62293,
     "hash": "a3a60e18f73277a97a79c8fb7560f897"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\NotFound.tsx": {
-    "mtime": 1777881043.6843388,
+    "mtime": 1778002056.62293,
     "hash": "56c0e8759328865e67fc2c480b916804"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\admin\\AdminApprovals.tsx": {
-    "mtime": 1777881043.685034,
-    "hash": "317f54c38f45444b6af813e330fc614c"
+    "mtime": 1778002056.6249392,
+    "hash": "a41c7c366a68d0ce62cbb1c39a1562f8"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\admin\\AdminCreateTask.tsx": {
-    "mtime": 1777881043.687662,
-    "hash": "81d499f768f4a96b15eca501e9727371"
+    "mtime": 1778002056.6249392,
+    "hash": "df5f682b43763227cbd9e30f4b66ac94"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\admin\\AdminDashboard.tsx": {
-    "mtime": 1777881043.688853,
-    "hash": "aa5e2402760260d3fcb1656135cbd127"
+    "mtime": 1778002056.6249392,
+    "hash": "9cbe10ae198dcd89290fe812aae3fea2"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\admin\\AdminEmployeeProfile.tsx": {
-    "mtime": 1777881043.688853,
+    "mtime": 1778002056.6269493,
     "hash": "9a1f4c2ae3ae516b7e2881896b72d65e"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\admin\\AdminEmployees.tsx": {
-    "mtime": 1777881388.4568691,
-    "hash": "21acd0a69a67cc8f40de54df3ff9cb6c"
+    "mtime": 1778002722.3305588,
+    "hash": "cacdb2f8495f309e596ff9b2b5347f97"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\admin\\AdminTasks.tsx": {
-    "mtime": 1777881043.6908712,
-    "hash": "ee21167ae4c74540303274f7351a54b4"
+    "mtime": 1778002056.6269493,
+    "hash": "38b479ea25212d30c031f6f03e02dea8"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\employee\\EmployeeDashboard.tsx": {
-    "mtime": 1777881043.695673,
+    "mtime": 1778002056.6289597,
     "hash": "bd1aa6ab094e8d021b16b3375b88b34c"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\employee\\EmployeeProfile.tsx": {
-    "mtime": 1777881043.697688,
+    "mtime": 1778002056.6289597,
     "hash": "e9543dbbbce16efc5fb70bb67e070938"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\pages\\employee\\EmployeeTasks.tsx": {
-    "mtime": 1777881043.697688,
+    "mtime": 1778002056.6289597,
     "hash": "f86870ca75f80cf84a47e85d977ad144"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\test\\example.test.ts": {
-    "mtime": 1777881043.6996984,
+    "mtime": 1778002056.6307113,
     "hash": "e9e7bb15aba58b53a65f23498219603e"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\test\\setup.ts": {
-    "mtime": 1777881043.7011664,
+    "mtime": 1778002056.6307113,
     "hash": "e70c804c294f3f04e80e7a8351de899e"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\src\\test\\supabase-connection.test.ts": {
-    "mtime": 1777881043.7026768,
+    "mtime": 1778002056.6307113,
     "hash": "974c14e0760f1e495abc27ac5b42d646"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\functions\\admin-update-user\\index.ts": {
-    "mtime": 1777881043.709722,
+    "mtime": 1778002056.6307113,
     "hash": "6403df8ea73c7909751ad22b4c112a55"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260429000000_initial_schema.sql": {
-    "mtime": 1777881043.7137513,
+    "mtime": 1778002056.6307113,
     "hash": "71109e4b15c8a58e9068a26e67db23ab"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260429000001_triggers.sql": {
-    "mtime": 1777881043.7137513,
+    "mtime": 1778002056.6307113,
     "hash": "7e22678cd3a1495d3a90b7c61542c468"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260429000002_fix_admin_rls.sql": {
-    "mtime": 1777881043.7157638,
+    "mtime": 1778002056.6356773,
     "hash": "ff20bf420defe52e39d2a090deaf4bb5"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260430000000_add_email_to_profiles.sql": {
-    "mtime": 1777881043.7180865,
+    "mtime": 1778002056.636384,
     "hash": "55dbd3958f08ee466a2f3dc0c411af42"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260430000001_admin_update_rls.sql": {
-    "mtime": 1777881043.719828,
+    "mtime": 1778002056.636384,
     "hash": "1764b80240e7acf16ad6f8fb2b2e0945"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260501000000_add_job_title_to_profiles.sql": {
-    "mtime": 1777881043.7218425,
+    "mtime": 1778002056.636384,
     "hash": "c0d9efca8cff477a48dd070a8ddafdb5"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260501000001_fix_handle_new_user_trigger.sql": {
-    "mtime": 1777881043.7218425,
+    "mtime": 1778002056.636384,
     "hash": "1781be82e2a07bde856f9567c82da706"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260501000002_fix_is_admin_function.sql": {
-    "mtime": 1777881043.7238574,
+    "mtime": 1778002056.636384,
     "hash": "cf7c5e69662993ff20f6f14bfc3ee659"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260501000003_bulletproof_rls_and_admin.sql": {
-    "mtime": 1777881043.7258708,
+    "mtime": 1778002056.636384,
     "hash": "30789edc3235f24475151fddccece872"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260501000004_restore_is_admin_for_cache.sql": {
-    "mtime": 1777881043.7278836,
+    "mtime": 1778002056.636384,
     "hash": "8081f95d3a1b111fa12232b3ec196c12"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260501000005_ultimate_rls_fix.sql": {
-    "mtime": 1777881043.7298944,
+    "mtime": 1778002056.636384,
     "hash": "7eed3e3d3f9c4569d0cba99273144c1d"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260501000006_remove_rogue_trigger.sql": {
-    "mtime": 1777881043.7319038,
+    "mtime": 1778002056.636384,
     "hash": "c6470fdec2f0786f92cd5026e268cb92"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260501000007_fix_all_rls.sql": {
-    "mtime": 1777881043.7339218,
+    "mtime": 1778002056.640575,
     "hash": "d61ba22f3e254208ae0bb94f3c5f7301"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260501000008_app_settings.sql": {
-    "mtime": 1777881043.7344391,
+    "mtime": 1778002056.640575,
     "hash": "f10f7a87064108d20be7044ff6826760"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\supabase\\migrations\\20260502084609_add_superadmin_role.sql": {
-    "mtime": 1777881043.7362764,
+    "mtime": 1778002056.640575,
     "hash": "f2042c0d229e4eaea79c5994ca6389c2"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\FULL_CODEBASE_EXPLAINED.md": {
-    "mtime": 1777881043.3347614,
+    "mtime": 1778002056.4189787,
     "hash": "87482cb9799535e0d31d222f67abe2a6"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\index.html": {
-    "mtime": 1777881043.4867918,
+    "mtime": 1778002056.525625,
     "hash": "f78b627c1c1517c3d9a240592e58ae7b"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\README.md": {
-    "mtime": 1777881043.33528,
-    "hash": "cf26333a65f3dec4330a006ce2287ab8"
+    "mtime": 1778002056.4189787,
+    "hash": "a613c48aeff1d9dddb99863582055989"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\SUPABASE_ADD_JOB_TITLE.md": {
-    "mtime": 1777881043.3372934,
+    "mtime": 1778002056.4189787,
     "hash": "d53d51df8f29283560a70f093a9a1a33"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\SUPABASE_RLS_JOB_TITLE.md": {
-    "mtime": 1777881043.3372934,
+    "mtime": 1778002056.4189787,
     "hash": "b9380861cd881753d33a417570a480f2"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\docs\\CHAT_SPEC.md": {
-    "mtime": 1777881043.3410602,
+    "mtime": 1778002056.4217343,
     "hash": "9d7b47e31929d146caa42cf798d08b6c"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\docs\\HIERARCHY.md": {
-    "mtime": 1777881043.3410602,
+    "mtime": 1778002056.4217343,
     "hash": "389803e01a4e142c23ac1e15f7c8dfa5"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\docs\\PERFORMANCE_LOGIC.md": {
-    "mtime": 1777881043.3410602,
+    "mtime": 1778002056.4217343,
     "hash": "05b947565215c25ebd25ac3a007758d4"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\docs\\SUPABASE_GUIDE.md": {
-    "mtime": 1777881043.3495598,
+    "mtime": 1778002056.425647,
     "hash": "af4969d3752ea06a9f4779f52ae78e8b"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\public\\robots.txt": {
-    "mtime": 1777881043.4904296,
+    "mtime": 1778002056.529486,
     "hash": "a9b03494151fe90e5decd2405400e106"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\public\\placeholder.svg": {
-    "mtime": 1777881043.4904296,
+    "mtime": 1778002056.529486,
     "hash": "4a57334f2b44f8eed3356ede2944d8a4"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\public\\zeex.png": {
-    "mtime": 1777881043.4904296,
+    "mtime": 1778002056.529486,
     "hash": "f03b327fd8724f34bdc7c01aff37fd21"
   },
   "A:\\AnuragMAin\\projects\\Ztasks\\project-lilt\\public\\ztasks-logo.jpg": {
-    "mtime": 1777881043.5024028,
+    "mtime": 1778002056.535666,
     "hash": "9b8cfd61092d36f9415fa86c34da0528"
   }
 }

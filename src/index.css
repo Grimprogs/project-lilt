@@ -168,6 +168,22 @@
 }
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-thumb { background: hsl(var(--border)); border-radius: 999px; }
 ::-webkit-scrollbar-thumb:hover { background: hsl(var(--muted-foreground) / 0.4); }
+
+.custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.custom-scrollbar::-webkit-scrollbar-thumb { background: hsl(var(--muted) / 0.8); }
+.custom-scrollbar::-webkit-scrollbar-thumb:hover { background: hsl(var(--primary) / 0.3); }
+
+/* Ensure sticky elements don't overlap tooltips/popovers */
+[data-radix-popper-content-wrapper], 
+.radix-tooltip-content,
+.radix-popover-content {
+  z-index: 100 !important;
+}
+
+/* Fix for sticky table headers with backdrop-blur */
+.sticky {
+  background-clip: padding-box;
+}

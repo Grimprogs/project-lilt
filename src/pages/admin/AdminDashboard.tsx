@@ -116,36 +116,38 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="font-display text-3xl font-bold">Welcome back, Admin 👋</h1>
-          <p className="text-muted-foreground">Here's what's happening across your team today.</p>
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 border-b -mx-4 px-4 pt-2 mb-4 shadow-sm">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="font-display text-3xl font-bold">Welcome back, Admin 👋</h1>
+            <p className="text-muted-foreground text-sm">Here's what's happening across your team today.</p>
+          </div>
+          <Button 
+            className="bg-gradient-primary shadow-glow hover:opacity-95 text-white"
+            onClick={() => {
+              downloadCSV(`ZTasksforce_Global_Report_${new Date().toISOString().slice(0, 10)}`, 
+                ["Employee", "Role", "Department", "Task", "Priority", "Status", "Due Date", "Started At", "Completed At", "Time Taken"], 
+                tasks.map(t => {
+                  const emp = empMap.get(t.assignee_id ?? "");
+                  return [
+                    emp?.name || "Unassigned",
+                    emp?.role || "—",
+                    emp?.department || "—",
+                    t.title,
+                    t.priority,
+                    t.status,
+                    t.due_date,
+                    t.started_at ? new Date(t.started_at).toLocaleString() : "—",
+                    t.approved_at ? new Date(t.approved_at).toLocaleString() : "—",
+                    calculateTaskDuration(t)
+                  ];
+                })
+              );
+            }}
+          >
+            <Download className="mr-2 h-4 w-4" /> Export Global Report
+          </Button>
         </div>
-        <Button 
-          className="bg-gradient-primary shadow-glow hover:opacity-95 text-white"
-          onClick={() => {
-            downloadCSV(`ZTasks_Global_Report_${new Date().toISOString().slice(0, 10)}`, 
-              ["Employee", "Role", "Department", "Task", "Priority", "Status", "Due Date", "Started At", "Completed At", "Time Taken"], 
-              tasks.map(t => {
-                const emp = empMap.get(t.assignee_id ?? "");
-                return [
-                  emp?.name || "Unassigned",
-                  emp?.role || "—",
-                  emp?.department || "—",
-                  t.title,
-                  t.priority,
-                  t.status,
-                  t.due_date,
-                  t.started_at ? new Date(t.started_at).toLocaleString() : "—",
-                  t.approved_at ? new Date(t.approved_at).toLocaleString() : "—",
-                  calculateTaskDuration(t)
-                ];
-              })
-            );
-          }}
-        >
-          <Download className="mr-2 h-4 w-4" /> Export Global Report
-        </Button>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-6">

@@ -15,7 +15,7 @@ interface AppCtx {
   user: SessionUser | null;
   profile: Profile | null;
   authLoading: boolean;
-  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<{ ok: boolean; profile?: Profile; error?: string }>;
   logout: () => Promise<void>;
 
   notifications: AppNotification[];
@@ -38,7 +38,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [theme, setTheme] = useState<"light" | "dark">(() => {
     if (typeof window === "undefined") return "light";
-    const saved = localStorage.getItem("ztasks.theme"); //saves or sees if pv user saved any data 
+    const saved = localStorage.getItem("ztasksforce.theme"); //saves or sees if pv user saved any data 
     if (saved === "dark" || saved === "light") return saved;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
@@ -83,11 +83,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
         name: data.name,
         username: data.username,
       });
+      setAuthLoading(false);
+      return data as Profile;
     }
     setAuthLoading(false);
+    return null;
   }
 
-  const login = async (email: string, password: string): Promise<{ ok: boolean; error?: string }> => {
+  const login = async (email: string, password: string): Promise<{ ok: boolean; profile?: Profile; error?: string }> => {
     setAuthLoading(true);
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) {
@@ -95,8 +98,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       return { ok: false, error: error.message };
     }
     if (data?.user) {
-      await fetchProfileAndSetUser(data.user.id);
-      return { ok: true };
+      const profile = await fetchProfileAndSetUser(data.user.id);
+      return { ok: true, profile };
     }
     setAuthLoading(false);
     return { ok: false, error: "Login failed. No user returned." };
@@ -110,7 +113,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const root = document.documentElement;
     if (theme === "dark") root.classList.add("dark"); else root.classList.remove("dark");
-    localStorage.setItem("ztasks.theme", theme);
+    localStorage.setItem("ztasksforce.theme", theme);
   }, [theme]);
 
 

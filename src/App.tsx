@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 
 import { AppProvider } from "@/context/AppContext";
 import { AppLayout } from "@/components/AppLayout";
+import { WideAppLayout } from "@/components/WideAppLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 
 import Landing from "./pages/Landing";
@@ -18,6 +19,7 @@ import AdminEmployeeProfile from "./pages/admin/AdminEmployeeProfile";
 import AdminTasks from "./pages/admin/AdminTasks";
 import AdminCreateTask from "./pages/admin/AdminCreateTask";
 import AdminApprovals from "./pages/admin/AdminApprovals";
+import AdminControlCenter from "./pages/admin/AdminControlCenter";
 
 import EmployeeDashboard from "./pages/employee/EmployeeDashboard";
 import EmployeeTasks from "./pages/employee/EmployeeTasks";
@@ -31,7 +33,7 @@ const App = () => (
       <TooltipProvider>
         <Toaster />
         <Sonner />
-        <BrowserRouter>
+        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login/admin" element={<Login role="admin" />} />
@@ -39,15 +41,18 @@ const App = () => (
 
             <Route path="/admin" element={<ProtectedRoute role="admin"><AppLayout><AdminDashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/employees" element={<ProtectedRoute role="admin"><AppLayout><AdminEmployees /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/employees/wide" element={<ProtectedRoute role="admin"><WideAppLayout><AdminEmployees /></WideAppLayout></ProtectedRoute>} />
             <Route path="/admin/employees/:id" element={<ProtectedRoute role="admin"><AppLayout><AdminEmployeeProfile /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/tasks" element={<ProtectedRoute role="admin"><AppLayout><AdminTasks /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/my-tasks" element={<ProtectedRoute role="admin"><AppLayout><EmployeeTasks /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/tasks/new" element={<ProtectedRoute role="admin"><AppLayout><AdminCreateTask /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/approvals" element={<ProtectedRoute role="admin"><AppLayout><AdminApprovals /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/control-center" element={<ProtectedRoute role="admin"><AppLayout><AdminControlCenter /></AppLayout></ProtectedRoute>} />
 
             <Route path="/me" element={<ProtectedRoute role="employee"><AppLayout><EmployeeDashboard /></AppLayout></ProtectedRoute>} />
             <Route path="/me/tasks" element={<ProtectedRoute role="employee"><AppLayout><EmployeeTasks /></AppLayout></ProtectedRoute>} />
             <Route path="/me/team" element={<ProtectedRoute role="employee"><AppLayout><AdminEmployees /></AppLayout></ProtectedRoute>} />
+            <Route path="/me/team/wide" element={<ProtectedRoute role="employee"><WideAppLayout><AdminEmployees /></WideAppLayout></ProtectedRoute>} />
             <Route path="/me/employees/:id" element={<ProtectedRoute role="employee"><AppLayout><AdminEmployeeProfile /></AppLayout></ProtectedRoute>} />
             <Route path="/me/profile" element={<ProtectedRoute role="employee"><AppLayout><EmployeeProfile /></AppLayout></ProtectedRoute>} />
 

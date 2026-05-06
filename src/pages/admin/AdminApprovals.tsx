@@ -41,11 +41,11 @@ export default function AdminApprovals() {
 
   return (
     <div className="space-y-6">
-      <div>
+      <div className="sticky top-0 z-20 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 pb-4 border-b -mx-4 px-4 pt-2 mb-4 shadow-sm">
         <h1 className="font-display text-3xl font-bold flex items-center gap-2">
           <Inbox className="h-7 w-7 text-primary" /> Approval queue
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Review tasks employees have marked as ready for completion.
         </p>
       </div>
