@@ -2,6 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { AppNotification, NotificationType, Role } from "@/data/seed";
 import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/integrations/supabase/types";
+import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 
 interface SessionUser {
   role: Role;
@@ -36,19 +38,38 @@ interface AppCtx {
 const Ctx = createContext<AppCtx | null>(null);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fireNativeNotification(title: string, body: string) {
-  if (typeof Notification === "undefined") return;
-  if (Notification.permission !== "granted") return;
-  try {
-    const n = new Notification(title, {
-      body,
-      icon: "/ztasks-logo.jpg",
-      badge: "/ztasks-logo.jpg",
-      tag: `ztasks-${Date.now()}`,
-      silent: false,
-    });
-    setTimeout(() => n.close(), 6000);
-  } catch { /* ignore on unsupported browsers */ }
+async function fireNativeNotification(title: string, body: string) {
+  if (Capacitor.isNativePlatform()) {
+    try {
+      await LocalNotifications.schedule({
+        notifications: [
+          {
+            title,
+            body,
+            id: new Date().getTime(),
+            schedule: { at: new Date(Date.now() + 100) },
+            sound: undefined,
+            attachments: undefined,
+            actionTypeId: "",
+            extra: null
+          }
+        ]
+      });
+    } catch { /* ignore */ }
+  } else {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "granted") return;
+    try {
+      const n = new Notification(title, {
+        body,
+        icon: "/ztasks-logo.jpg",
+        badge: "/ztasks-logo.jpg",
+        tag: `ztasks-${Date.now()}`,
+        silent: false,
+      });
+      setTimeout(() => n.close(), 6000);
+    } catch { /* ignore on unsupported browsers */ }
+  }
 }
 
 const VERB: Record<string, string> = {
@@ -106,7 +127,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setAuthLoading(false);
 
       // Auto-request OS notification permission on first login
-      if (typeof Notification !== "undefined" && Notification.permission === "default") {
+      if (Capacitor.isNativePlatform()) {
+        try {
+          const status = await LocalNotifications.checkPermissions();
+          if (status.display === 'prompt' || status.display === 'prompt-with-rationale') {
+            await LocalNotifications.requestPermissions();
+          }
+        } catch { /* ignore */ }
+      } else if (typeof Notification !== "undefined" && Notification.permission === "default") {
         setTimeout(async () => {
           const result = await Notification.requestPermission();
           setNotifPerm(result);

@@ -229,8 +229,11 @@ function ApprovalCard({ n, onAction }: { n: AppNotification; onAction: () => voi
 
 // ── My Task Item (task_assigned — navigates to tasks page) ───────────────────
 function MyTaskItem({ n, onClick, onDismiss }: { n: AppNotification; onClick: () => void; onDismiss: () => void }) {
-  // Always navigate to personal task board for personal assignments
-  const taskLink = `/me/tasks`;
+  const { user } = useApp();
+  // Always navigate to personal task board for personal assignments, but use correct admin route
+  const taskLink = user?.role === "admin" || user?.role === "superadmin"
+    ? `/admin/my-tasks`
+    : `/me/tasks`;
 
   return (
     <li className={cn(

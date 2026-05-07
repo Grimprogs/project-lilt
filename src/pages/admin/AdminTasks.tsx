@@ -17,6 +17,9 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { UserAvatar } from "@/components/UserAvatar";
 
+import { TaskDetailDialog } from "@/components/TaskDetailDialog";
+import type { Task } from "@/integrations/supabase/types";
+
 export default function AdminTasks() {
   const { profile } = useApp();
   const { data: allTasks = [] } = useTasks({ role: "admin" });
@@ -34,6 +37,7 @@ export default function AdminTasks() {
   const [employeeFilter, setEmployeeFilter] = useState<string | null>(null);
   const [employeeOpen, setEmployeeOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const location = useLocation();
   const highlightTaskId = location.state?.highlightTaskId;
@@ -424,15 +428,16 @@ export default function AdminTasks() {
                       key={t.id} 
                       id={`task-${t.id}`}
                       className={cn(
-                        "border-b hover:bg-muted/30 transition-colors group scroll-m-24",
+                        "border-b hover:bg-muted/30 transition-colors group scroll-m-24 cursor-pointer",
                         highlightTaskId === t.id && "bg-primary/10 ring-2 ring-primary ring-inset animate-pulse-3"
                       )}
+                      onClick={() => setSelectedTask(t)}
                     >
                       <td className="sticky left-0 z-10 bg-background px-4 py-3 border-r group-hover:bg-muted/30 transition-colors">
-                        <Link to={`/admin/tasks/${t.id}`} className="block min-w-0">
+                        <div className="block min-w-0">
                           <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{t.title}</p>
                           {t.description && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{t.description}</p>}
-                        </Link>
+                        </div>
                       </td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1.5 min-w-0">
@@ -466,6 +471,17 @@ export default function AdminTasks() {
             </table>
           </div>
         </div>
+      )}
+
+      {selectedTask && (
+        <TaskDetailDialog
+          task={selectedTask}
+          open={!!selectedTask}
+          onOpenChange={(open) => !open && setSelectedTask(null)}
+          canManage={isSuperAdmin || (allowedAssignDepts?.includes((profiles.find(p => p.id === selectedTask.assignee_id)?.department || '').toLowerCase()) ?? false)}
+          canApprove={isSuperAdmin || (allowedAssignDepts?.includes((profiles.find(p => p.id === selectedTask.assignee_id)?.department || '').toLowerCase()) ?? false)}
+          canComplete={selectedTask.assignee_id === profile?.id}
+        />
       )}
     </div>
   );

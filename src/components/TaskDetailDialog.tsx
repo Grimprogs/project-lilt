@@ -58,17 +58,12 @@ export function TaskDetailDialog({
   const canEditSelfTask = isSelfAssigned && canSelfAssign;
 
   const handleDelete = () => {
-    toast.warning(
-      <div className="flex flex-col gap-1">
-        <span className="font-semibold text-sm">Delete "{task.title}"?</span>
-        <span className="text-xs text-muted-foreground">This cannot be undone.</span>
-      </div>,
-      {
-        duration: 6000,
-        action: { label: "Delete", onClick: () => { actions.deleteTask(task.id); onOpenChange(false); } },
-        cancel: { label: "Cancel", onClick: () => {} },
-      }
-    );
+    toast(`Delete "${task.title}"?`, {
+      description: "This cannot be undone.",
+      duration: 6000,
+      action: { label: "Delete", onClick: () => { actions.deleteTask(task.id); onOpenChange(false); } },
+      cancel: { label: "Cancel", onClick: () => {} },
+    });
   };
 
   return (

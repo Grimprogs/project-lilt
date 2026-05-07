@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { Profile, Task } from "@/integrations/supabase/types";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useTaskActions } from "@/hooks/useTasks";
@@ -49,6 +49,15 @@ export function TaskCard({
 
   // Detail dialog state
   const [dialogOpen, setDialogOpen] = useState(false);
+
+  // Auto-open dialog if highlighted from a notification click
+  useEffect(() => {
+    if (highlighted) {
+      // Small delay to allow scroll to complete before popping up
+      const t = setTimeout(() => setDialogOpen(true), 400);
+      return () => clearTimeout(t);
+    }
+  }, [highlighted]);
 
   return (
     <>
@@ -164,23 +173,18 @@ export function TaskCard({
                 className="h-8 w-8 text-muted-foreground hover:text-destructive"
                 aria-label="Delete task"
                 onClick={() => {
-                  toast.warning(
-                    <div className="flex flex-col gap-1">
-                      <span className="font-semibold text-sm">Delete "{task.title}"?</span>
-                      <span className="text-xs text-muted-foreground">This cannot be undone.</span>
-                    </div>,
-                    {
-                      duration: 6000,
-                      action: {
-                        label: "Delete",
-                        onClick: () => actions.deleteTask(task.id),
-                      },
-                      cancel: {
-                        label: "Cancel",
-                        onClick: () => {},
-                      },
-                    }
-                  );
+                  toast(`Delete "${task.title}"?`, {
+                    description: "This cannot be undone.",
+                    duration: 6000,
+                    action: {
+                      label: "Delete",
+                      onClick: () => actions.deleteTask(task.id),
+                    },
+                    cancel: {
+                      label: "Cancel",
+                      onClick: () => {},
+                    },
+                  });
                 }}
               >
                 <Trash2 className="h-4 w-4" />
