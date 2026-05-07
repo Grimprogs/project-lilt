@@ -104,6 +104,7 @@ export default function AdminTasks() {
   const filtered = useMemo(() => {
     const canManageTask = (task: any) => {
       if (isSuperAdmin) return true;
+      if (task.assignee_id === profile?.id) return true; // Always see own tasks
       const assignee = profiles.find(p => p.id === task.assignee_id);
       const assigneeDept = (assignee?.department || '').toLowerCase();
       if (!allowedAssignDepts) return false;
@@ -115,11 +116,8 @@ export default function AdminTasks() {
       const assignee = profiles.find(p => p.id === t.assignee_id);
       if (assignee?.role === 'superadmin' && assignee.id !== profile?.id) return false;
 
-      // 2. Scope to allowed departments
-      if (!canManageTask(t)) {
-        const assigneeDept = (assignee?.department || '').toLowerCase();
-        if (!allowedAssignDepts || !allowedAssignDepts.includes(assigneeDept)) return false;
-      }
+      // 2. Scope to allowed departments (and own tasks)
+      if (!canManageTask(t)) return false;
 
       // 3. Department filter
       if (deptFilter) {
