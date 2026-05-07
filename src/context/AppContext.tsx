@@ -39,24 +39,63 @@ interface AppCtx {
 const Ctx = createContext<AppCtx | null>(null);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
+let _channelReady = false;
+async function ensureNotificationChannel() {
+  if (_channelReady) return;
+  try {
+    await LocalNotifications.createChannel({
+      id: "ztasks_high",
+      name: "ZTasks Alerts",
+      importance: 5,
+      description: "Task notifications",
+      visibility: 1,
+      vibration: true,
+    });
+    _channelReady = true;
+  } catch (e) {
+    console.warn("[ZTasks] Channel creation failed:", e);
+  }
+}
+
+async function ensureNotificationPermission() {
+  try {
+    const perms = await LocalNotifications.checkPermissions();
+    if (perms.display !== "granted") {
+      const result = await LocalNotifications.requestPermissions();
+      return result.display === "granted";
+    }
+    return true;
+  } catch (e) {
+    console.warn("[ZTasks] Permission check failed:", e);
+    return false;
+  }
+}
+
 async function fireNativeNotification(title: string, body: string) {
   if (Capacitor.isNativePlatform()) {
+    const granted = await ensureNotificationPermission();
+    if (!granted) {
+      console.warn("[ZTasks] Notification permission not granted");
+      return;
+    }
+    await ensureNotificationChannel();
     try {
-      await LocalNotifications.schedule({
+      const result = await LocalNotifications.schedule({
         notifications: [
           {
             title,
             body,
-            id: Math.floor(Math.random() * 1000000),
-            schedule: { at: new Date(Date.now() + 50) },
-            sound: "default.wav",
-            actionTypeId: "",
-            extra: null,
-            channelId: "high_importance",
+            id: Math.floor(Math.random() * 2000000000),
+            smallIcon: "ic_stat_icon_config_sample",
+            iconColor: "#7C3AED",
+            channelId: "ztasks_high",
           }
         ]
       });
-    } catch { /* ignore */ }
+      console.log("[ZTasks] Notification scheduled:", result);
+    } catch (e) {
+      console.error("[ZTasks] Notification schedule FAILED:", e);
+    }
   } else {
     if (typeof Notification === "undefined") return;
     if (Notification.permission !== "granted") return;
@@ -129,17 +168,14 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
       // Auto-request OS notification permission on first login
       if (Capacitor.isNativePlatform()) {
-        try {
-          const status = await LocalNotifications.checkPermissions();
-          if (status.display === 'prompt' || status.display === 'prompt-with-rationale') {
-            await LocalNotifications.requestPermissions();
-          }
-        } catch { /* ignore */ }
+        await ensureNotificationPermission();
+        await ensureNotificationChannel();
+        console.log("[ZTasks] Native notification setup complete");
       } else if (typeof Notification !== "undefined" && Notification.permission === "default") {
         setTimeout(async () => {
           const result = await Notification.requestPermission();
           setNotifPerm(result);
-        }, 2000); // small delay so the UI loads first
+        }, 2000);
       }
 
       // Load existing unread notifications from DB
@@ -336,19 +372,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [unreadCount]);
 
-  useEffect(() => {
-    if (Capacitor.isNativePlatform()) {
-      LocalNotifications.createChannel({
-        id: "high_importance",
-        name: "High Importance",
-        importance: 5,
-        description: "Heads-up notifications for tasks",
-        sound: "default.wav",
-        visibility: 1,
-        vibration: true,
-      }).catch(() => {});
-    }
-  }, []);
+  // Channel creation is now handled inline by ensureNotificationChannel()
 
   const markNotificationRead = useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
