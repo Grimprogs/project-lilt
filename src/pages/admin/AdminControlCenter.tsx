@@ -745,7 +745,7 @@ function AccessMatrix({
 
     return (
       <tr key={key} className="border-b hover:bg-muted/5 transition-colors">
-        <td className="px-3 py-2.5 align-middle">
+        <td className="sticky left-0 z-10 bg-background px-3 py-2.5 align-middle border-r">
           <div className={cn("font-semibold text-[11px]", isPersonKey ? "text-violet-600" : isCustom ? "text-orange-600" : "text-primary")}>
             {displayLabel}
           </div>
@@ -980,11 +980,11 @@ function AccessMatrix({
 
   return (
     <TooltipProvider delayDuration={100}>
-      <div className="overflow-x-auto">
+      <div className="overflow-auto max-h-[70vh] rounded-lg border">
         <table className="w-full text-[11px] border-separate border-spacing-0">
-          <thead className="sticky top-0 z-10">
-            <tr className="bg-muted/95 backdrop-blur border-y">
-              <th className="px-3 py-2 text-left font-semibold w-40 border-b">{type === 'dept' ? 'Viewer Dept' : 'Override Key'}</th>
+          <thead className="sticky top-0 z-20">
+            <tr className="bg-muted backdrop-blur border-y">
+              <th className="sticky left-0 z-30 bg-muted px-3 py-2 text-left font-semibold w-40 border-b border-r">{type === 'dept' ? 'Viewer Dept' : 'Override Key'}</th>
               <th className="px-3 py-2 text-left font-semibold border-b"><HeaderHelp label="Visible Depts" help="Departments this viewer can see in lists." /></th>
               <th className="px-3 py-2 text-center font-semibold w-14 border-b"><HeaderHelp label="Jobs?" help="Show job titles for visible people." /></th>
               <th className="px-3 py-2 text-center font-semibold w-20 border-b"><HeaderHelp label="Profiles?" help="Eye button visibility. Use Depts picker to restrict to specific departments." /></th>
