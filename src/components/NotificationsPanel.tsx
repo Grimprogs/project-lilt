@@ -1,6 +1,6 @@
 import { useApp } from "@/context/AppContext";
 import { AppNotification, NotificationType } from "@/data/seed";
-import { Play, Pause, Send, CheckCircle2, XCircle, Bell } from "lucide-react";
+import { Play, Pause, Send, CheckCircle2, XCircle, Bell, BellOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Link } from "react-router-dom";
@@ -25,7 +25,8 @@ function timeAgo(iso: string) {
 }
 
 export function NotificationsPanel({ onItemClick }: { onItemClick?: () => void }) {
-  const { visibleNotifications, unreadCount, markAllNotificationsRead, markNotificationRead, user } = useApp();
+  const { visibleNotifications, unreadCount, markAllNotificationsRead, markNotificationRead, user,
+    notificationPermission, requestNotificationPermission } = useApp();
 
   return (
     <div className="w-[22rem] max-w-[90vw]">
@@ -44,6 +45,20 @@ export function NotificationsPanel({ onItemClick }: { onItemClick?: () => void }
           </Button>
         )}
       </div>
+
+      {/* ── Push notification permission prompt ─────────── */}
+      {notificationPermission !== "unsupported" && notificationPermission !== "granted" && (
+        <div className="flex items-center gap-3 border-b bg-primary/5 px-4 py-2.5">
+          <BellOff className="h-4 w-4 text-primary shrink-0" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium">Enable notifications</p>
+            <p className="text-[10px] text-muted-foreground leading-tight">Get alerts on your phone when tasks update</p>
+          </div>
+          <Button size="sm" className="h-7 text-xs shrink-0" onClick={requestNotificationPermission}>
+            Allow
+          </Button>
+        </div>
+      )}
 
       <ul className="max-h-96 overflow-auto py-1">
         {visibleNotifications.length === 0 && (

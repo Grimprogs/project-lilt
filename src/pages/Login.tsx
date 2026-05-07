@@ -5,13 +5,15 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Role } from "@/data/seed";
-import { ArrowLeft, CheckSquare2, Eye, EyeOff, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, CheckSquare2, Eye, EyeOff, ShieldCheck, UserRound, Download } from "lucide-react";
 import { toast } from "sonner";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 
 export default function Login({ role }: { role: Role }) {
   const { login } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
+  const { isInstallable, installPWA } = usePWAInstall();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -37,20 +39,32 @@ export default function Login({ role }: { role: Role }) {
   const isAdmin = role === "admin";
 
   return (
-    <div className="relative min-h-screen overflow-hidden hero-bg">
+    <div className="relative min-h-screen w-screen overflow-x-hidden hero-bg">
       <div className="absolute inset-0 -z-10" aria-hidden />
-      <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-        <Link to="/" className="flex items-center gap-2.5">
-          <img src="/ztasks-logo.jpg" alt="Z-Tasksforce Logo" className="h-9 w-9 rounded-xl object-cover shadow-glow" />
-          <span className="font-display text-xl font-bold">Z-Tasksforce</span>
+      <header className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 py-4">
+        <Link to="/" className="flex items-center gap-2 shrink-0">
+          <img src="/ztasks-logo.jpg" alt="Z-Tasksforce Logo" className="h-8 w-8 rounded-xl object-cover shadow-glow" />
+          <span className="font-display text-lg font-bold">Z-Tasksforce</span>
         </Link>
-        <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ArrowLeft className="h-4 w-4" /> Back
-        </Link>
+        <div className="flex items-center gap-2 shrink-0">
+          {isInstallable && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1.5 border-primary/30 hover:bg-primary/5 text-xs"
+              onClick={installPWA}
+            >
+              <Download className="h-3.5 w-3.5" /> Install
+            </Button>
+          )}
+          <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+            <ArrowLeft className="h-4 w-4" /> Back
+          </Link>
+        </div>
       </header>
 
-      <main className="mx-auto flex max-w-md flex-col px-6 pt-8 pb-16">
-        <div className="surface-card p-7 animate-scale-in">
+      <main className="mx-auto flex max-w-sm flex-col px-4 pt-6 pb-12">
+        <div className="surface-card p-5 sm:p-7 animate-scale-in">
           <div className="mb-6 flex items-center gap-3">
             <div className={`grid h-11 w-11 place-items-center rounded-xl ${isAdmin ? "bg-gradient-primary text-white shadow-glow" : "bg-accent text-accent-foreground"}`}>
               {isAdmin ? <ShieldCheck className="h-5 w-5" /> : <UserRound className="h-5 w-5" />}
