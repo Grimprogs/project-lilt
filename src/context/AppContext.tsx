@@ -128,13 +128,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .from("notifications")
       .select("*")
       .order("created_at", { ascending: false })
-      .limit(50);
-
-    if (role === "admin" || role === "superadmin") {
-      query = query.or(`audience.eq.${userId},audience.eq.admin`);
-    } else {
-      query = query.eq("audience", userId);
-    }
+      .limit(50)
+      .eq("audience", userId);
 
     const { data } = await query;
     if (!data || data.length === 0) return;
@@ -197,10 +192,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           event: "INSERT",
           schema: "public",
           table: "notifications",
-          // Use audience column — either their profile UUID or 'admin' broadcast
-          filter: (profile.role === "admin" || profile.role === "superadmin")
-            ? `audience=in.(${profile.id},admin)`
-            : `audience=eq.${profile.id}`,
+          filter: `audience=eq.${profile.id}`,
         },
         (payload) => {
           const row = payload.new as any;
@@ -268,11 +260,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setNotifications(prev => [localNotif, ...prev].slice(0, 200));
 
     // Persist to Supabase so the recipient's realtime subscription picks it up
-    // audience is either a profile UUID or the string 'admin' (broadcast)
+    // audience is a profile UUID
     const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(n.audience);
     supabase.from("notifications").insert({
-      user_id: isUUID ? n.audience : null, // only set if real profile UUID
-      audience: n.audience,                 // always set (includes 'admin' string)
+      user_id: isUUID ? n.audience : null,
+      audience: n.audience,
       task_id: n.taskId || null,
       type: n.type as any,
       read: false,
@@ -286,18 +278,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Visible notifications (for current user) ──────────────────────────────
   // Everyone sees:
-  //  1. Notifications addressed specifically to their profile ID
-  //     (task assigned, approval requests routed to them by the hierarchy matrix)
-  //  2. 'admin' broadcast — informational feed (task_started/stopped)
-  //     only visible to admin/superadmin roles
-  // Admins do NOT see all notifications — the Control Center matrix in useTasks
-  // controls exactly which admins get approval notifications via getApproverIds.
+  // Notifications addressed specifically to their profile ID
+  // (task assigned, approval requests, and logs routed to them by the hierarchy matrix)
   const visibleNotifications = useMemo(() => {
     if (!user || !profile) return [];
-    return notifications.filter(n =>
-      n.audience === profile.id ||
-      ((user.role === "admin" || user.role === "superadmin") && n.audience === "admin")
-    );
+    return notifications.filter(n => n.audience === profile.id);
   }, [notifications, user, profile]);
 
   const unreadCount = visibleNotifications.filter(n => !n.read).length;

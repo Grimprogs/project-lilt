@@ -199,13 +199,11 @@ export function useTaskActions() {
     onSuccess: (_, { task }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       if (!task) return;
-      // Notify approvers for this dept
       const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
       const dept = assignee?.department ?? '';
       const approvers = getApproverIds(dept, visibilityMap, allProfiles);
-      // Also always notify 'admin' broadcast for dashboard feed
-      const targets = new Set([...approvers, 'admin']);
-      targets.forEach(audience => {
+      
+      approvers.forEach(audience => {
         pushNotification({
           type: 'task_started',
           actorId: user?.employeeId ?? '',
@@ -224,13 +222,19 @@ export function useTaskActions() {
     onSuccess: (_, { task }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       if (!task) return;
-      pushNotification({
-        type: 'task_stopped',
-        actorId: user?.employeeId ?? '',
-        actorName: user?.name ?? 'Employee',
-        taskTitle: task.title,
-        taskId: task.id,
-        audience: 'admin',
+      const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
+      const dept = assignee?.department ?? '';
+      const approvers = getApproverIds(dept, visibilityMap, allProfiles);
+
+      approvers.forEach(audience => {
+        pushNotification({
+          type: 'task_stopped',
+          actorId: user?.employeeId ?? '',
+          actorName: user?.name ?? 'Employee',
+          taskTitle: task.title,
+          taskId: task.id,
+          audience,
+        });
       });
     },
   });
@@ -246,21 +250,8 @@ export function useTaskActions() {
       const dept = assignee?.department ?? '';
       const approverIds = getApproverIds(dept, visibilityMap, allProfiles);
 
-      // Notify each specific approver by their profile ID
-      if (approverIds.length > 0) {
-        approverIds.forEach(approverProfileId => {
-          pushNotification({
-            type: 'completion_requested',
-            actorId: user?.employeeId ?? '',
-            actorName: user?.name ?? 'Employee',
-            taskTitle: task.title,
-            taskDescription: task.description ?? undefined,
-            taskId: task.id,
-            audience: approverProfileId, // specific approver, not broadcast
-          });
-        });
-      } else {
-        // Fallback: broadcast to all admins
+      // Notify each specific approver by their profile ID (which includes superadmins)
+      approverIds.forEach(approverProfileId => {
         pushNotification({
           type: 'completion_requested',
           actorId: user?.employeeId ?? '',
@@ -268,9 +259,9 @@ export function useTaskActions() {
           taskTitle: task.title,
           taskDescription: task.description ?? undefined,
           taskId: task.id,
-          audience: 'admin',
+          audience: approverProfileId,
         });
-      }
+      });
     },
   });
 
@@ -280,13 +271,20 @@ export function useTaskActions() {
     onSuccess: (_, { task }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       if (!task?.assignee_id) return;
-      pushNotification({
-        type: 'completion_approved',
-        actorId: user?.employeeId ?? '',
-        actorName: user?.name ?? 'Admin',
-        taskTitle: task.title,
-        taskId: task.id,
-        audience: task.assignee_id, // notify the employee
+      const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
+      const dept = assignee?.department ?? '';
+      const approvers = getApproverIds(dept, visibilityMap, allProfiles);
+      
+      const targets = new Set([task.assignee_id, ...approvers]);
+      targets.forEach(audience => {
+        pushNotification({
+          type: 'completion_approved',
+          actorId: user?.employeeId ?? '',
+          actorName: user?.name ?? 'Admin',
+          taskTitle: task.title,
+          taskId: task.id,
+          audience,
+        });
       });
     },
   });
@@ -297,13 +295,20 @@ export function useTaskActions() {
     onSuccess: (_, { task }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       if (!task?.assignee_id) return;
-      pushNotification({
-        type: 'completion_rejected',
-        actorId: user?.employeeId ?? '',
-        actorName: user?.name ?? 'Admin',
-        taskTitle: task.title,
-        taskId: task.id,
-        audience: task.assignee_id, // notify the employee
+      const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
+      const dept = assignee?.department ?? '';
+      const approvers = getApproverIds(dept, visibilityMap, allProfiles);
+      
+      const targets = new Set([task.assignee_id, ...approvers]);
+      targets.forEach(audience => {
+        pushNotification({
+          type: 'completion_rejected',
+          actorId: user?.employeeId ?? '',
+          actorName: user?.name ?? 'Admin',
+          taskTitle: task.title,
+          taskId: task.id,
+          audience,
+        });
       });
     },
   });
