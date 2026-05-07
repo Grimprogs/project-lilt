@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { useApp } from "@/context/AppContext";
 import { useTasks } from "@/hooks/useTasks";
 import { useVisibilitySettings } from "@/hooks/useSettings";
@@ -14,6 +15,20 @@ export default function EmployeeTasks() {
   const { data: visibility = {} } = useVisibilitySettings();
   const [tab, setTab] = useState<"all" | any>("all");
   const [q, setQ] = useState("");
+  
+  const location = useLocation();
+  const highlightTaskId = location.state?.highlightTaskId;
+
+  useEffect(() => {
+    if (highlightTaskId && my.length > 0) {
+      const el = document.getElementById(`task-${highlightTaskId}`);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
+      }
+    }
+  }, [highlightTaskId, my.length]);
 
   // Check self-assign permission
   const canSelfAssign = useMemo(() => {
@@ -63,12 +78,14 @@ export default function EmployeeTasks() {
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {filtered.map(t => (
-          <TaskCard
-            key={t.id}
-            task={t}
-            showAssignee={false}
-            canComplete
+          <TaskCard 
+            key={t.id} 
+            task={t} 
+            showAssignee={false} 
+            canComplete 
             canSelfAssign={canSelfAssign}
+            id={`task-${t.id}`}
+            highlighted={highlightTaskId === t.id}
           />
         ))}
         {filtered.length === 0 && (

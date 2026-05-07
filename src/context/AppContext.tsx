@@ -207,12 +207,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
             createdAt: row.created_at,
             read: false,
           };
-          setNotifications(prev => [notif, ...prev].slice(0, 200));
+          setNotifications(prev => {
+            if (prev.some(n => n.id === notif.id)) return prev;
+            return [notif, ...prev].slice(0, 200);
+          });
           // Fire OS notification
           fireNativeNotification(
             "Z-Tasksforce",
             `${notif.actorName} ${VERB[notif.type] ?? notif.type} "${notif.taskTitle}"`
           );
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "notifications",
+        },
+        (payload) => {
+          setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
         }
       )
       .subscribe();

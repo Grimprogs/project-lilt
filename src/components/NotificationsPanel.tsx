@@ -163,6 +163,7 @@ function ApprovalCard({ n, onAction }: { n: AppNotification; onAction: () => voi
             {" "}<span className="text-muted-foreground">requested approval for</span>{" "}
             <Link
               to={`/admin/tasks`}
+              state={{ highlightTaskId: n.taskId }}
               className="font-medium hover:underline text-primary"
               onClick={() => markNotificationRead(n.id)}
             >
@@ -238,6 +239,7 @@ function MyTaskItem({ n, onClick, onDismiss }: { n: AppNotification; onClick: ()
     )}>
       <Link
         to={taskLink}
+        state={{ highlightTaskId: n.taskId }}
         className="flex items-start gap-3 flex-1 min-w-0 cursor-pointer"
         onClick={onClick}
       >

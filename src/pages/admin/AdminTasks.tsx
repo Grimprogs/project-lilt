@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { useMemo, useState, useEffect } from "react";
+import { Link, useLocation } from "react-router-dom";
 import { useApp } from "@/context/AppContext";
 import { useTasks } from "@/hooks/useTasks";
 import { useProfiles } from "@/hooks/useProfiles";
@@ -34,6 +34,20 @@ export default function AdminTasks() {
   const [employeeFilter, setEmployeeFilter] = useState<string | null>(null);
   const [employeeOpen, setEmployeeOpen] = useState(false);
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+
+  const location = useLocation();
+  const highlightTaskId = location.state?.highlightTaskId;
+
+  useEffect(() => {
+    if (highlightTaskId && allTasks.length > 0) {
+      const el = document.getElementById(`task-${highlightTaskId}`);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 100);
+      }
+    }
+  }, [highlightTaskId, allTasks.length, viewMode]);
 
   const isSuperAdmin = profile?.role === 'superadmin';
 
@@ -359,6 +373,8 @@ export default function AdminTasks() {
                 canManage={canManageTask}
                 canApprove={canManageTask}
                 canComplete={t.assignee_id === profile?.id}
+                id={`task-${t.id}`}
+                highlighted={highlightTaskId === t.id}
               />
             );
           })}
@@ -404,8 +420,15 @@ export default function AdminTasks() {
                   };
 
                   return (
-                    <tr key={t.id} className="border-b hover:bg-muted/30 transition-colors group">
-                      <td className="sticky left-0 z-10 bg-background px-4 py-3 border-r">
+                    <tr 
+                      key={t.id} 
+                      id={`task-${t.id}`}
+                      className={cn(
+                        "border-b hover:bg-muted/30 transition-colors group scroll-m-24",
+                        highlightTaskId === t.id && "bg-primary/10 ring-2 ring-primary ring-inset animate-pulse-3"
+                      )}
+                    >
+                      <td className="sticky left-0 z-10 bg-background px-4 py-3 border-r group-hover:bg-muted/30 transition-colors">
                         <Link to={`/admin/tasks/${t.id}`} className="block min-w-0">
                           <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{t.title}</p>
                           {t.description && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{t.description}</p>}

@@ -20,6 +20,8 @@ interface Props {
   canApprove?: boolean;  // admin approval actions
   canSelfAssign?: boolean; // from visibility matrix: can_assign_self
   compact?: boolean;
+  id?: string;
+  highlighted?: boolean;
 }
 
 export function TaskCard({
@@ -30,6 +32,8 @@ export function TaskCard({
   canApprove = false,
   canSelfAssign = false,
   compact = false,
+  id,
+  highlighted = false,
 }: Props) {
   const { data } = useProfiles();
   const employees = (data ?? []) as Profile[];
@@ -49,10 +53,12 @@ export function TaskCard({
   return (
     <>
       <article
+        id={id}
         className={cn(
-          "surface-card hover-lift p-4 sm:p-5 animate-fade-in group transition-all cursor-pointer",
+          "surface-card hover-lift p-4 sm:p-5 animate-fade-in group transition-all cursor-pointer scroll-m-24",
           overdue && "border-destructive/40 bg-destructive/5",
           requested && "border-primary/40 bg-primary/5",
+          highlighted && "ring-2 ring-primary ring-offset-2 animate-pulse-3"
         )}
         onClick={(e) => {
           // Don't open dialog if user clicked a button, link, or inner interactive element

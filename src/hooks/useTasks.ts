@@ -68,7 +68,7 @@ export function useCreateTask() {
       title: string; description?: string; assignee_id: string;
       priority: TaskPriority; due_date: string; due_time: string; created_by?: string;
     }) => {
-      const { data, error } = await supabase.from('tasks').insert(input).select().single();
+      const { data, error } = await supabase.from('tasks').insert(input as any).select().single();
       if (error) throw error;
       return data as Task;
     },
@@ -113,7 +113,7 @@ export function useUpdateTask() {
       id: string;
       patch: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'due_date' | 'due_time' | 'assignee_id'>>;
     }) => {
-      const { data, error } = await supabase.from('tasks').update(patch).eq('id', id).select().single();
+      const { data, error } = await supabase.from('tasks').update(patch as any).eq('id', id).select().single();
       if (error) throw error;
       return data as Task;
     },
@@ -266,8 +266,10 @@ export function useTaskActions() {
   });
 
   const approveCompletion = useMutation({
-    mutationFn: ({ id }: { id: string; task?: Task }) =>
-      updateStatus(id, 'completed', { approved_at: new Date().toISOString() }),
+    mutationFn: async ({ id }: { id: string; task?: Task }) => {
+      await supabase.from('notifications').delete().eq('task_id', id).eq('type', 'completion_requested');
+      await updateStatus(id, 'completed', { approved_at: new Date().toISOString() });
+    },
     onSuccess: (_, { task }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       if (!task?.assignee_id) return;
@@ -290,8 +292,10 @@ export function useTaskActions() {
   });
 
   const rejectCompletion = useMutation({
-    mutationFn: ({ id }: { id: string; task?: Task }) =>
-      updateStatus(id, 'in_progress'),
+    mutationFn: async ({ id }: { id: string; task?: Task }) => {
+      await supabase.from('notifications').delete().eq('task_id', id).eq('type', 'completion_requested');
+      await updateStatus(id, 'in_progress');
+    },
     onSuccess: (_, { task }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       if (!task?.assignee_id) return;
