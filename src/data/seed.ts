@@ -4,6 +4,7 @@ export type TaskStatus = "pending" | "in_progress" | "completion_requested" | "c
 export type Priority = "low" | "medium" | "high" | "urgent";
 
 export type NotificationType =
+  | "task_assigned"
   | "task_started"
   | "task_stopped"
   | "completion_requested"
@@ -15,10 +16,11 @@ export interface AppNotification {
   type: NotificationType;
   taskId: string;
   taskTitle: string;
-  actorId: string;     // employee id (or "admin")
+  taskDescription?: string;  // short snippet for approval cards
+  actorId: string;
   actorName: string;
-  audience: "admin" | string; // "admin" or employee id
-  createdAt: string;   // ISO datetime
+  audience: string; // profile id OR 'admin'
+  createdAt: string;
   read: boolean;
 }
 

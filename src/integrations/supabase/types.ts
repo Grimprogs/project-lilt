@@ -4,6 +4,7 @@
 export type UserRole = 'superadmin' | 'admin' | 'employee';
 export type TaskStatus = 'pending' | 'in_progress' | 'completion_requested' | 'completed' | 'overdue';
 export type TaskPriority = 'low' | 'medium' | 'high' | 'urgent';
+export type NotificationKind = 'task_started' | 'task_stopped' | 'completion_requested' | 'completion_approved' | 'completion_rejected' | 'task_assigned';
 
 export interface Profile {
   id: string;
@@ -36,11 +37,17 @@ export interface Task {
 
 export interface Notification {
   id: string;
+  /** Profile ID of the recipient (UUID) — null for broadcast */
   user_id: string | null;
+  /** Audience routing key: profile UUID or 'admin' for broadcast */
+  audience: string | null;
   task_id: string | null;
-  type: 'task_started' | 'task_stopped' | 'completion_requested' | 'completion_approved' | 'completion_rejected';
+  type: NotificationKind;
   read: boolean;
   created_at: string;
+  actor_name: string | null;
+  task_title: string | null;
+  actor_id: string | null;
 }
 
 export interface Database {

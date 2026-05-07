@@ -375,66 +375,75 @@ export default function AdminTasks() {
           )}
         </div>
       ) : (
-        <div className="space-y-1">
-          {/* Table header */}
-          <div className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 px-3 py-2 text-[10px] font-semibold uppercase text-muted-foreground tracking-wider border-b">
-            <span>Task</span>
-            <span>Assignee</span>
-            <span>Department</span>
-            <span className="text-center">Status</span>
-            <span className="text-center">Priority</span>
-          </div>
-          {filtered.map(t => {
-            const assignee = profiles.find(p => p.id === t.assignee_id);
-            const assigneeDept = assignee?.department || '—';
-            const statusColors: Record<string, string> = {
-              pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
-              in_progress: "bg-blue-500/10 text-blue-600 border-blue-500/20",
-              completion_requested: "bg-purple-500/10 text-purple-600 border-purple-500/20",
-              completed: "bg-green-500/10 text-green-600 border-green-500/20",
-              overdue: "bg-red-500/10 text-red-600 border-red-500/20",
-            };
-            const priorityColors: Record<string, string> = {
-              urgent: "bg-red-500/10 text-red-600",
-              high: "bg-orange-500/10 text-orange-600",
-              medium: "bg-yellow-500/10 text-yellow-600",
-              low: "bg-green-500/10 text-green-600",
-            };
+        <div className="surface-card overflow-hidden">
+          <div className="overflow-auto max-h-[70vh] custom-scrollbar">
+            <table className="w-full text-sm border-separate border-spacing-0">
+              <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
+                <tr>
+                  <th className="sticky left-0 z-30 bg-muted/95 px-4 py-3 text-left border-b border-r min-w-[200px]">Task</th>
+                  <th className="px-4 py-3 text-left border-b min-w-[120px]">Assignee</th>
+                  <th className="px-4 py-3 text-left border-b min-w-[120px]">Department</th>
+                  <th className="px-4 py-3 text-center border-b min-w-[100px]">Status</th>
+                  <th className="px-4 py-3 text-center border-b min-w-[100px]">Priority</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.map(t => {
+                  const assignee = profiles.find(p => p.id === t.assignee_id);
+                  const assigneeDept = assignee?.department || '—';
+                  const statusColors: Record<string, string> = {
+                    pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/20",
+                    in_progress: "bg-blue-500/10 text-blue-600 border-blue-500/20",
+                    completion_requested: "bg-purple-500/10 text-purple-600 border-purple-500/20",
+                    completed: "bg-green-500/10 text-green-600 border-green-500/20",
+                    overdue: "bg-red-500/10 text-red-600 border-red-500/20",
+                  };
+                  const priorityColors: Record<string, string> = {
+                    urgent: "bg-red-500/10 text-red-600",
+                    high: "bg-orange-500/10 text-orange-600",
+                    medium: "bg-yellow-500/10 text-yellow-600",
+                    low: "bg-green-500/10 text-green-600",
+                  };
 
-            return (
-              <Link key={t.id} to={`/admin/tasks/${t.id}`}
-                className="grid grid-cols-[2fr_1fr_1fr_1fr_1fr] gap-2 px-3 py-2.5 rounded-md hover:bg-muted/40 transition-colors items-center group border-b border-border/30">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{t.title}</p>
-                  {t.description && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{t.description}</p>}
-                </div>
-                <div className="flex items-center gap-1.5 min-w-0">
-                  {assignee && <UserAvatar name={assignee.name} color={assignee.avatar_color ?? undefined} size="sm" />}
-                  <span className="text-xs truncate">{assignee?.name || '—'}</span>
-                </div>
-                <span className="text-xs text-muted-foreground truncate">{assigneeDept}</span>
-                <div className="text-center">
-                  <span className={cn("text-[10px] px-2 py-0.5 rounded-full border", statusColors[t.status] || "")}>
-                    {(t.status || '').replace(/_/g, ' ')}
-                  </span>
-                </div>
-                <div className="text-center">
-                  <span className={cn("text-[10px] px-2 py-0.5 rounded-full", priorityColors[t.priority] || "")}>
-                    {t.priority}
-                  </span>
-                </div>
-              </Link>
-            );
-          })}
-          {filtered.length === 0 && (
-            <div className="surface-card p-10 text-center text-muted-foreground space-y-2">
-              <p className="text-lg font-medium">No tasks match these filters</p>
-              <p className="text-xs">Try adjusting your department, job, or status filters.</p>
-              {activeFilterCount > 0 && (
-                <Button variant="outline" size="sm" onClick={clearAllFilters}>Clear all filters</Button>
-              )}
-            </div>
-          )}
+                  return (
+                    <tr key={t.id} className="border-b hover:bg-muted/30 transition-colors group">
+                      <td className="sticky left-0 z-10 bg-background px-4 py-3 border-r">
+                        <Link to={`/admin/tasks/${t.id}`} className="block min-w-0">
+                          <p className="text-sm font-medium truncate group-hover:text-primary transition-colors">{t.title}</p>
+                          {t.description && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{t.description}</p>}
+                        </Link>
+                      </td>
+                      <td className="px-4 py-3">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          {assignee && <UserAvatar name={assignee.name} color={assignee.avatar_color ?? undefined} size="sm" />}
+                          <span className="text-xs truncate">{assignee?.name || '—'}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3 text-xs text-muted-foreground">{assigneeDept}</td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full border whitespace-nowrap", statusColors[t.status] || "")}>
+                          {(t.status || '').replace(/_/g, ' ')}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-center">
+                        <span className={cn("text-[10px] px-2 py-0.5 rounded-full whitespace-nowrap", priorityColors[t.priority] || "")}>
+                          {t.priority}
+                        </span>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {filtered.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-10 text-center text-muted-foreground space-y-2">
+                      <p className="text-lg font-medium">No tasks match these filters</p>
+                      <p className="text-xs">Try adjusting your filters.</p>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>

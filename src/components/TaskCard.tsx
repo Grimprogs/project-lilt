@@ -9,6 +9,7 @@ import { CalendarClock, Check, Clock, Pause, Pencil, Play, Send, Trash2, X } fro
 import { formatDue, timeRemaining } from "@/lib/task-utils";
 import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 
 interface Props {
   task: Task;
@@ -136,9 +137,33 @@ export function TaskCard({
             </Button>
           )}
 
-          {/* Delete button — admins only */}
+          {/* Delete button — admins only — with confirmation toast */}
           {canManage && (
-            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => actions.deleteTask(task.id)} aria-label="Delete task">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              aria-label="Delete task"
+              onClick={() => {
+                toast.warning(
+                  <div className="flex flex-col gap-1">
+                    <span className="font-semibold text-sm">Delete "{task.title}"?</span>
+                    <span className="text-xs text-muted-foreground">This cannot be undone.</span>
+                  </div>,
+                  {
+                    duration: 6000,
+                    action: {
+                      label: "Delete",
+                      onClick: () => actions.deleteTask(task.id),
+                    },
+                    cancel: {
+                      label: "Cancel",
+                      onClick: () => {},
+                    },
+                  }
+                );
+              }}
+            >
               <Trash2 className="h-4 w-4" />
             </Button>
           )}

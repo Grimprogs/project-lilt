@@ -1,11 +1,14 @@
 // src/hooks/useTasks.ts
-// Task CRUD + workflow mutations via React Query + Supabase
-// Notifications are fired on every status change and on task creation.
+// Task CRUD + workflow mutations with hierarchy-aware notification routing.
+// When an employee requests completion, ONLY the admins/managers who have
+// can_assign_tasks permission over that employee's department are notified.
 
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Task, TaskStatus, TaskPriority } from '@/integrations/supabase/types';
 import { useApp } from '@/context/AppContext';
+import { useVisibilitySettings } from '@/hooks/useSettings';
+import { useProfiles } from '@/hooks/useProfiles';
 
 type UseTasksOptions = {
   role?: 'admin' | 'employee';
@@ -71,24 +74,18 @@ export function useCreateTask() {
     },
     onSuccess: (task) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
-      // Notify the assignee that a task was assigned to them
-      if (task.assignee_id !== user?.employeeId) {
+      // Notify the assignee they received a task
+      if (task.assignee_id && task.assignee_id !== user?.employeeId) {
         pushNotification({
-          type: 'task_started', // reuse as "task_assigned" — we'll map it properly
+          type: 'task_assigned',
+          actorId: user?.employeeId ?? 'admin',
           actorName: user?.name ?? 'Admin',
           taskTitle: task.title,
+          taskDescription: task.description ?? undefined,
           taskId: task.id,
-          audience: task.assignee_id,  // notify the person assigned
+          audience: task.assignee_id,
         });
       }
-      // Also notify admins panel
-      pushNotification({
-        type: 'task_started',
-        actorName: user?.name ?? 'Admin',
-        taskTitle: task.title,
-        taskId: task.id,
-        audience: 'admin',
-      });
     },
   });
 }
@@ -124,79 +121,210 @@ export function useUpdateTask() {
   });
 }
 
-// -- Status Mutations (with notifications) --
+// -- Hierarchy-aware notification routing hook --
 
-interface StatusMutationOptions {
-  /** Notification type to fire after success */
-  notifType: 'task_started' | 'task_stopped' | 'completion_requested' | 'completion_approved' | 'completion_rejected';
-  /** Who should be notified: 'admin' audience or the employee (assignee) */
-  notifyAudience: 'admin' | 'assignee';
-  extra?: Partial<Task>;
+/**
+ * Returns the list of profile IDs who should be notified when an employee
+ * in `assigneeDept` requests task completion — i.e. admins with
+ * can_assign_tasks permission over that department.
+ */
+function getApproverIds(
+  assigneeDept: string,
+  visibilityMap: Record<string, any>,
+  allProfiles: any[]
+): string[] {
+  const approverIds: string[] = [];
+  const deptLower = assigneeDept.toLowerCase();
+
+  for (const profile of allProfiles) {
+    if (profile.role !== 'admin' && profile.role !== 'superadmin') continue;
+
+    // SuperAdmins always get notified
+    if (profile.role === 'superadmin') {
+      approverIds.push(profile.id);
+      continue;
+    }
+
+    // Check visibility matrix for this profile
+    const personKey = `profile:${profile.id}`;
+    const roleKey = profile.department && profile.job_title
+      ? `${profile.department}:${profile.job_title}`
+      : null;
+    const settings =
+      visibilityMap[personKey] ??
+      (roleKey ? visibilityMap[roleKey] : null) ??
+      visibilityMap[profile.department ?? ''] ??
+      null;
+
+    if (!settings) continue;
+
+    // Check if they have assignment permission for this dept
+    const canAssign = settings.can_assign_tasks === true;
+    if (!canAssign) continue;
+
+    const assignableDepts = (settings.assignable_depts || []) as string[];
+    if (assignableDepts.length === 0) {
+      // can_assign_tasks with no dept restriction → their own dept
+      if ((profile.department ?? '').toLowerCase() === deptLower) {
+        approverIds.push(profile.id);
+      }
+    } else {
+      if (assignableDepts.map((d: string) => d.toLowerCase()).includes(deptLower)) {
+        approverIds.push(profile.id);
+      }
+    }
+  }
+
+  // Deduplicate
+  return [...new Set(approverIds)];
 }
 
-function useStatusMutation({ notifType, notifyAudience, extra }: StatusMutationOptions) {
+// -- Status Mutations (with hierarchy-aware notifications) --
+
+export function useTaskActions() {
   const qc = useQueryClient();
   const { pushNotification, user } = useApp();
+  const { data: visibilityMap = {} } = useVisibilitySettings();
+  const { data: allProfiles = [] } = useProfiles();
 
-  return useMutation({
-    mutationFn: async ({ id, task }: { id: string; task?: Task }) => {
-      const patch: Record<string, unknown> = { status: getNewStatus(notifType), ...extra };
-      if (notifType === 'task_started') patch.started_at = new Date().toISOString();
-      if (notifType === 'completion_requested') patch.completion_requested_at = new Date().toISOString();
-      if (notifType === 'completion_approved') patch.approved_at = new Date().toISOString();
-      const { error } = await supabase.from('tasks').update(patch).eq('id', id);
-      if (error) throw error;
-      return task;
-    },
-    onSuccess: (task) => {
+  const updateStatus = async (taskId: string, status: TaskStatus, extra?: Record<string, unknown>) => {
+    const patch: Record<string, unknown> = { status, ...extra };
+    const { error } = await supabase.from('tasks').update(patch).eq('id', taskId);
+    if (error) throw error;
+  };
+
+  const startTask = useMutation({
+    mutationFn: ({ id }: { id: string; task?: Task }) =>
+      updateStatus(id, 'in_progress', { started_at: new Date().toISOString() }),
+    onSuccess: (_, { task }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       if (!task) return;
-
-      const audience = notifyAudience === 'admin' ? 'admin' : task.assignee_id;
-      pushNotification({
-        type: notifType,
-        actorName: user?.name ?? 'Someone',
-        taskTitle: task.title,
-        taskId: task.id,
-        audience,
+      // Notify approvers for this dept
+      const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
+      const dept = assignee?.department ?? '';
+      const approvers = getApproverIds(dept, visibilityMap, allProfiles);
+      // Also always notify 'admin' broadcast for dashboard feed
+      const targets = new Set([...approvers, 'admin']);
+      targets.forEach(audience => {
+        pushNotification({
+          type: 'task_started',
+          actorId: user?.employeeId ?? '',
+          actorName: user?.name ?? 'Employee',
+          taskTitle: task.title,
+          taskId: task.id,
+          audience,
+        });
       });
     },
   });
-}
 
-function getNewStatus(notifType: StatusMutationOptions['notifType']): TaskStatus {
-  switch (notifType) {
-    case 'task_started':           return 'in_progress';
-    case 'task_stopped':           return 'pending';
-    case 'completion_requested':   return 'completion_requested';
-    case 'completion_approved':    return 'completed';
-    case 'completion_rejected':    return 'in_progress';
-  }
-}
+  const stopTask = useMutation({
+    mutationFn: ({ id }: { id: string; task?: Task }) =>
+      updateStatus(id, 'pending'),
+    onSuccess: (_, { task }) => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      if (!task) return;
+      pushNotification({
+        type: 'task_stopped',
+        actorId: user?.employeeId ?? '',
+        actorName: user?.name ?? 'Employee',
+        taskTitle: task.title,
+        taskId: task.id,
+        audience: 'admin',
+      });
+    },
+  });
 
-// Named hooks —————————————————————————————————————————————
-export function useStartTask()         { return useStatusMutation({ notifType: 'task_started',          notifyAudience: 'admin' }); }
-export function useStopTask()          { return useStatusMutation({ notifType: 'task_stopped',          notifyAudience: 'admin' }); }
-export function useRequestCompletion() { return useStatusMutation({ notifType: 'completion_requested',  notifyAudience: 'admin' }); }
-export function useApproveCompletion() { return useStatusMutation({ notifType: 'completion_approved',   notifyAudience: 'assignee' }); }
-export function useRejectCompletion()  { return useStatusMutation({ notifType: 'completion_rejected',   notifyAudience: 'assignee' }); }
+  const requestCompletion = useMutation({
+    mutationFn: ({ id }: { id: string; task?: Task }) =>
+      updateStatus(id, 'completion_requested', { completion_requested_at: new Date().toISOString() }),
+    onSuccess: (_, { task }) => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      if (!task) return;
+      // Find the assignee's dept so we can route to hierarchy-aware approvers
+      const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
+      const dept = assignee?.department ?? '';
+      const approverIds = getApproverIds(dept, visibilityMap, allProfiles);
 
-// -- Convenience (used by TaskCard) --
+      // Notify each specific approver by their profile ID
+      if (approverIds.length > 0) {
+        approverIds.forEach(approverProfileId => {
+          pushNotification({
+            type: 'completion_requested',
+            actorId: user?.employeeId ?? '',
+            actorName: user?.name ?? 'Employee',
+            taskTitle: task.title,
+            taskDescription: task.description ?? undefined,
+            taskId: task.id,
+            audience: approverProfileId, // specific approver, not broadcast
+          });
+        });
+      } else {
+        // Fallback: broadcast to all admins
+        pushNotification({
+          type: 'completion_requested',
+          actorId: user?.employeeId ?? '',
+          actorName: user?.name ?? 'Employee',
+          taskTitle: task.title,
+          taskDescription: task.description ?? undefined,
+          taskId: task.id,
+          audience: 'admin',
+        });
+      }
+    },
+  });
 
-export function useTaskActions() {
-  const startTask      = useStartTask();
-  const stopTask       = useStopTask();
-  const requestCompl   = useRequestCompletion();
-  const approveCompl   = useApproveCompletion();
-  const rejectCompl    = useRejectCompletion();
-  const deleteTask     = useDeleteTask();
+  const approveCompletion = useMutation({
+    mutationFn: ({ id }: { id: string; task?: Task }) =>
+      updateStatus(id, 'completed', { approved_at: new Date().toISOString() }),
+    onSuccess: (_, { task }) => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      if (!task?.assignee_id) return;
+      pushNotification({
+        type: 'completion_approved',
+        actorId: user?.employeeId ?? '',
+        actorName: user?.name ?? 'Admin',
+        taskTitle: task.title,
+        taskId: task.id,
+        audience: task.assignee_id, // notify the employee
+      });
+    },
+  });
+
+  const rejectCompletion = useMutation({
+    mutationFn: ({ id }: { id: string; task?: Task }) =>
+      updateStatus(id, 'in_progress'),
+    onSuccess: (_, { task }) => {
+      qc.invalidateQueries({ queryKey: ['tasks'] });
+      if (!task?.assignee_id) return;
+      pushNotification({
+        type: 'completion_rejected',
+        actorId: user?.employeeId ?? '',
+        actorName: user?.name ?? 'Admin',
+        taskTitle: task.title,
+        taskId: task.id,
+        audience: task.assignee_id, // notify the employee
+      });
+    },
+  });
+
+  const deleteTask = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from('notifications').delete().eq('task_id', id);
+      const { error } = await supabase.from('tasks').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['tasks'] }),
+  });
 
   return {
-    startTask:          (id: string, task?: Task) => startTask.mutate({ id, task }),
-    stopTask:           (id: string, task?: Task) => stopTask.mutate({ id, task }),
-    requestCompletion:  (id: string, task?: Task) => requestCompl.mutate({ id, task }),
-    approveCompletion:  (id: string, task?: Task) => approveCompl.mutate({ id, task }),
-    rejectCompletion:   (id: string, task?: Task) => rejectCompl.mutate({ id, task }),
-    deleteTask:         (id: string) => deleteTask.mutate(id),
+    startTask: (id: string, task?: Task) => startTask.mutate({ id, task }),
+    stopTask: (id: string, task?: Task) => stopTask.mutate({ id, task }),
+    requestCompletion: (id: string, task?: Task) => requestCompletion.mutate({ id, task }),
+    approveCompletion: (id: string, task?: Task) => approveCompletion.mutate({ id, task }),
+    rejectCompletion: (id: string, task?: Task) => rejectCompletion.mutate({ id, task }),
+    deleteTask: (id: string) => deleteTask.mutate(id),
   };
 }
+
+

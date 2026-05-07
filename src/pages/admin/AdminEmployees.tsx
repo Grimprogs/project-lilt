@@ -548,11 +548,11 @@ export default function AdminEmployees() {
         </div>
       ) : (
         <div className="surface-card overflow-hidden">
-          <div className="overflow-x-auto custom-scrollbar">
+          <div className="overflow-auto max-h-[70vh] custom-scrollbar">
             <table className="w-full text-sm border-separate border-spacing-0">
-              <thead className="bg-muted/40 text-xs uppercase tracking-wider text-muted-foreground">
+              <thead className="sticky top-0 z-20 bg-muted/95 backdrop-blur text-xs uppercase tracking-wider text-muted-foreground">
                 <tr>
-                  <th className="px-4 py-3 text-left border-b">Name</th>
+                  <th className="sticky left-0 z-30 bg-muted/95 px-4 py-3 text-left border-b border-r">Name</th>
                   <th className="px-4 py-3 text-left border-b">Username</th>
                   <th className="px-4 py-3 text-left border-b">Job Title</th>
                   <th className="px-4 py-3 text-left border-b">Department</th>
@@ -571,7 +571,7 @@ export default function AdminEmployees() {
 
                   return (
                     <tr key={e.id} className="border-t hover:bg-muted/30 transition-colors">
-                      <td className="px-4 py-3">
+                      <td className="sticky left-0 z-10 bg-background px-4 py-3 border-r">
                         <div className="flex items-center gap-3">
                           <UserAvatar name={e.name} color={e.avatar_color ?? undefined} size="sm" />
                           <div>
