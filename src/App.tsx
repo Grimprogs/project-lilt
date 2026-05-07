@@ -8,6 +8,7 @@ import { AppProvider } from "@/context/AppContext";
 import { AppLayout } from "@/components/AppLayout";
 import { WideAppLayout } from "@/components/WideAppLayout";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { Capacitor } from "@capacitor/core";
 
 import Landing from "./pages/Landing";
 import Login from "./pages/Login";
@@ -28,15 +29,18 @@ import EmployeeProfile from "./pages/employee/EmployeeProfile";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <AppProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-          <Routes>
-            <Route path="/" element={<Navigate to="/login/employee" replace />} />
+const App = () => {
+  const isNative = Capacitor.isNativePlatform();
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <AppProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+            <Routes>
+              <Route path="/" element={isNative ? <Navigate to="/login/employee" replace /> : <Landing />} />
             <Route path="/login/admin" element={<Login role="admin" />} />
             <Route path="/login/employee" element={<Login role="employee" />} />
 
@@ -62,8 +66,9 @@ const App = () => (
           </Routes>
         </BrowserRouter>
       </TooltipProvider>
-    </AppProvider>
-  </QueryClientProvider>
-);
+      </AppProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
