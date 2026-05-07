@@ -5,11 +5,12 @@ import { useEffect } from "react";
 import { useApp } from "@/context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { cn } from "@/lib/utils";
 
 export default function Landing() {
   const { user } = useApp();
   const navigate = useNavigate();
-  const { isInstallable, installPWA } = usePWAInstall();
+  const { showInstallButton, isInstalled, installPWA } = usePWAInstall();
 
   useEffect(() => {
     if (user?.role === "admin") navigate("/admin", { replace: true });
@@ -34,15 +35,20 @@ export default function Landing() {
 
         <div className="flex items-center gap-2 shrink-0">
           {/* Install App — shown only if browser supports it */}
-          {isInstallable && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="hidden sm:flex items-center gap-1.5 border-primary/30 hover:bg-primary/5 text-xs"
-              onClick={installPWA}
+          {showInstallButton && (
+            <button
+              onClick={isInstalled ? undefined : installPWA}
+              className={cn(
+                "hidden sm:flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition-colors",
+                isInstalled
+                  ? "border-success/40 bg-success/10 text-success cursor-default"
+                  : "border-primary/30 hover:bg-primary/5 text-foreground"
+              )}
             >
-              <Download className="h-3.5 w-3.5" /> Install App
-            </Button>
+              {isInstalled
+                ? <><span className="h-3.5 w-3.5">✓</span> Installed</>
+                : <><Download className="h-3.5 w-3.5" /> Install App</>}
+            </button>
           )}
           <Button asChild variant="ghost" size="sm"><Link to="/login/employee">Employee</Link></Button>
           <Button asChild size="sm" className="bg-gradient-primary text-white shadow-glow hover:opacity-95">
@@ -82,10 +88,20 @@ export default function Landing() {
                 </Link>
               </Button>
               {/* Install App — hero version visible on mobile too */}
-              {isInstallable && (
-                <Button size="lg" variant="outline" className="border-primary/40 hover:bg-primary/5 gap-2" onClick={installPWA}>
-                  <Download className="h-4 w-4" /> Download App
-                </Button>
+              {showInstallButton && (
+                <button
+                  onClick={isInstalled ? undefined : installPWA}
+                  className={cn(
+                    "inline-flex items-center gap-2 rounded-xl border px-6 py-3 text-sm font-medium transition-colors",
+                    isInstalled
+                      ? "border-success/40 bg-success/10 text-success cursor-default"
+                      : "border-primary/40 hover:bg-primary/5"
+                  )}
+                >
+                  {isInstalled
+                    ? <><span>✓</span> App Installed</>
+                    : <><Download className="h-4 w-4" /> Download App</>}
+                </button>
               )}
             </div>
 

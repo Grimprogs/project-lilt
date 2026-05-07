@@ -18,6 +18,7 @@ import AdminEmployees from "./pages/admin/AdminEmployees";
 import AdminEmployeeProfile from "./pages/admin/AdminEmployeeProfile";
 import AdminTasks from "./pages/admin/AdminTasks";
 import AdminCreateTask from "./pages/admin/AdminCreateTask";
+import AdminEditTask from "./pages/admin/AdminEditTask";
 import AdminApprovals from "./pages/admin/AdminApprovals";
 import AdminControlCenter from "./pages/admin/AdminControlCenter";
 
@@ -46,6 +47,7 @@ const App = () => (
             <Route path="/admin/tasks" element={<ProtectedRoute role="admin"><AppLayout><AdminTasks /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/my-tasks" element={<ProtectedRoute role="admin"><AppLayout><EmployeeTasks /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/tasks/new" element={<ProtectedRoute role="admin"><AppLayout><AdminCreateTask /></AppLayout></ProtectedRoute>} />
+            <Route path="/admin/tasks/:id/edit" element={<ProtectedRoute role="admin"><AppLayout><AdminEditTask /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/approvals" element={<ProtectedRoute role="admin"><AppLayout><AdminApprovals /></AppLayout></ProtectedRoute>} />
             <Route path="/admin/control-center" element={<ProtectedRoute role="admin"><AppLayout><AdminControlCenter /></AppLayout></ProtectedRoute>} />
 

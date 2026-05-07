@@ -29,6 +29,7 @@ interface AppCtx {
 
   notificationPermission: NotificationPermission | "unsupported";
   requestNotificationPermission: () => Promise<void>;
+  pushNotification: (n: Omit<AppNotification, "id" | "createdAt" | "read">) => void;
 }
 
 const Ctx = createContext<AppCtx | null>(null);
@@ -193,8 +194,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     theme, toggleTheme,
     notificationPermission: notifPerm,
     requestNotificationPermission,
+    pushNotification,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [user, profile, authLoading, notifications, visibleNotifications, unreadCount, theme, toggleTheme, notifPerm, requestNotificationPermission]);
+  }), [user, profile, authLoading, notifications, visibleNotifications, unreadCount, theme, toggleTheme, notifPerm, requestNotificationPermission, pushNotification]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

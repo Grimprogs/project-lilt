@@ -1,12 +1,14 @@
+import { useState } from "react";
 import type { Profile, Task } from "@/integrations/supabase/types";
 import { useProfiles } from "@/hooks/useProfiles";
 import { useTaskActions } from "@/hooks/useTasks";
 import { StatusBadge, PriorityBadge } from "./StatusBadge";
 import { UserAvatar } from "./UserAvatar";
 import { Button } from "@/components/ui/button";
-import { CalendarClock, Check, Clock, Pause, Play, Send, Trash2, X } from "lucide-react";
+import { CalendarClock, Check, Clock, Pause, Pencil, Play, Send, Trash2, X } from "lucide-react";
 import { formatDue, timeRemaining } from "@/lib/task-utils";
 import { cn } from "@/lib/utils";
+import { Link } from "react-router-dom";
 
 interface Props {
   task: Task;
@@ -33,10 +35,14 @@ export function TaskCard({
   const overdue = task.status === "overdue";
   const requested = task.status === "completion_requested";
 
+  // Read more state
+  const [expanded, setExpanded] = useState(false);
+  const descLong = (task.description?.length ?? 0) > 120;
+
   return (
     <article
       className={cn(
-        "surface-card hover-lift p-5 animate-fade-in group transition-all",
+        "surface-card hover-lift p-4 sm:p-5 animate-fade-in group transition-all",
         overdue && "border-destructive/40 bg-destructive/5",
         requested && "border-primary/40 bg-primary/5",
       )}
@@ -47,9 +53,23 @@ export function TaskCard({
             <StatusBadge status={task.status} />
             <PriorityBadge priority={task.priority} />
           </div>
-          <h3 className="font-display text-base font-semibold leading-snug truncate">{task.title}</h3>
-          {!compact && (
-            <p className="mt-1 line-clamp-2 text-sm text-muted-foreground">{task.description}</p>
+          <h3 className="font-display text-base font-semibold leading-snug">{task.title}</h3>
+
+          {/* Description with Read more */}
+          {!compact && task.description && (
+            <div className="mt-1">
+              <p className={cn("text-sm text-muted-foreground", !expanded && descLong && "line-clamp-2")}>
+                {task.description}
+              </p>
+              {descLong && (
+                <button
+                  className="mt-0.5 text-xs text-primary hover:underline font-medium"
+                  onClick={() => setExpanded(e => !e)}
+                >
+                  {expanded ? "Show less" : "Read more"}
+                </button>
+              )}
+            </div>
           )}
         </div>
         {showAssignee && assignee && (
@@ -57,7 +77,7 @@ export function TaskCard({
         )}
       </div>
 
-      <div className="mt-4 flex flex-wrap items-center justify-between gap-3 text-xs">
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-xs">
         <div className="flex items-center gap-3 text-muted-foreground">
           <span className="inline-flex items-center gap-1">
             <CalendarClock className="h-3.5 w-3.5" />
@@ -73,16 +93,16 @@ export function TaskCard({
           {canComplete && task.status !== "completed" && task.status !== "completion_requested" && (
             <>
               {(task.status === "pending" || task.status === "overdue") && (
-                <Button size="sm" className="h-8 bg-info text-info-foreground hover:bg-info/90" onClick={() => actions.startTask(task.id)}>
+                <Button size="sm" className="h-8 bg-info text-info-foreground hover:bg-info/90" onClick={() => actions.startTask(task.id, task)}>
                   <Play className="h-3.5 w-3.5" /> I'm On It
                 </Button>
               )}
               {task.status === "in_progress" && (
                 <>
-                  <Button size="sm" variant="secondary" className="h-8" onClick={() => actions.stopTask(task.id)}>
+                  <Button size="sm" variant="secondary" className="h-8" onClick={() => actions.stopTask(task.id, task)}>
                     <Pause className="h-3.5 w-3.5" /> Not Doing
                   </Button>
-                  <Button size="sm" className="h-8 bg-gradient-primary text-white hover:opacity-95" onClick={() => actions.requestCompletion(task.id)}>
+                  <Button size="sm" className="h-8 bg-gradient-primary text-white hover:opacity-95" onClick={() => actions.requestCompletion(task.id, task)}>
                     <Send className="h-3.5 w-3.5" /> Request Completion
                   </Button>
                 </>
@@ -98,15 +118,25 @@ export function TaskCard({
 
           {canApprove && requested && (
             <>
-              <Button size="sm" variant="outline" className="h-8" onClick={() => actions.rejectCompletion(task.id)}>
+              <Button size="sm" variant="outline" className="h-8" onClick={() => actions.rejectCompletion(task.id, task)}>
                 <X className="h-3.5 w-3.5" /> Reject
               </Button>
-              <Button size="sm" className="h-8 bg-success text-success-foreground hover:bg-success/90" onClick={() => actions.approveCompletion(task.id)}>
+              <Button size="sm" className="h-8 bg-success text-success-foreground hover:bg-success/90" onClick={() => actions.approveCompletion(task.id, task)}>
                 <Check className="h-3.5 w-3.5" /> Approve
               </Button>
             </>
           )}
 
+          {/* Edit button — admins only (canManage) */}
+          {canManage && (
+            <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-primary" asChild>
+              <Link to={`/admin/tasks/${task.id}/edit`} aria-label="Edit task">
+                <Pencil className="h-4 w-4" />
+              </Link>
+            </Button>
+          )}
+
+          {/* Delete button — admins only */}
           {canManage && (
             <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => actions.deleteTask(task.id)} aria-label="Delete task">
               <Trash2 className="h-4 w-4" />

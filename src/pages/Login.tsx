@@ -5,15 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Role } from "@/data/seed";
-import { ArrowLeft, CheckSquare2, Eye, EyeOff, ShieldCheck, UserRound, Download } from "lucide-react";
+import { ArrowLeft, Eye, EyeOff, ShieldCheck, UserRound, Download } from "lucide-react";
 import { toast } from "sonner";
 import { usePWAInstall } from "@/hooks/usePWAInstall";
+import { cn } from "@/lib/utils";
 
 export default function Login({ role }: { role: Role }) {
   const { login } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
-  const { isInstallable, installPWA } = usePWAInstall();
+  const { showInstallButton, isInstalled, installPWA } = usePWAInstall();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,15 +48,20 @@ export default function Login({ role }: { role: Role }) {
           <span className="font-display text-lg font-bold">Z-Tasksforce</span>
         </Link>
         <div className="flex items-center gap-2 shrink-0">
-          {isInstallable && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1.5 border-primary/30 hover:bg-primary/5 text-xs"
-              onClick={installPWA}
+          {showInstallButton && (
+            <button
+              onClick={isInstalled ? undefined : installPWA}
+              className={cn(
+                "flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-xs font-medium transition-colors",
+                isInstalled
+                  ? "border-success/40 bg-success/10 text-success cursor-default"
+                  : "border-primary/30 hover:bg-primary/5 text-foreground"
+              )}
             >
-              <Download className="h-3.5 w-3.5" /> Install
-            </Button>
+              {isInstalled
+                ? <>✓ Installed</>
+                : <><Download className="h-3.5 w-3.5" /> Install</>}
+            </button>
           )}
           <Link to="/" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
             <ArrowLeft className="h-4 w-4" /> Back
