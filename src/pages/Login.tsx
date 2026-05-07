@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useApp } from "@/context/AppContext";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ import { usePWAInstall } from "@/hooks/usePWAInstall";
 import { cn } from "@/lib/utils";
 
 export default function Login({ role }: { role: Role }) {
-  const { login } = useApp();
+  const { login, user } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
   const { showInstallButton, isInstalled, installPWA } = usePWAInstall();
@@ -20,6 +20,14 @@ export default function Login({ role }: { role: Role }) {
   const [password, setPassword] = useState("");
   const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (user) {
+      const isUserAdmin = user.role === "admin" || user.role === "superadmin";
+      const to = isUserAdmin ? "/admin" : "/me";
+      navigate(to, { replace: true });
+    }
+  }, [user, navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

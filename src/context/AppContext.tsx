@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Profile } from "@/integrations/supabase/types";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
+import { Badge } from "@capawesome/capacitor-badge";
 
 interface SessionUser {
   role: Role;
@@ -46,12 +47,12 @@ async function fireNativeNotification(title: string, body: string) {
           {
             title,
             body,
-            id: new Date().getTime(),
-            schedule: { at: new Date(Date.now() + 100) },
-            sound: undefined,
-            attachments: undefined,
+            id: Math.floor(Math.random() * 1000000),
+            schedule: { at: new Date(Date.now() + 50) },
+            sound: "default.wav",
             actionTypeId: "",
-            extra: null
+            extra: null,
+            channelId: "high_importance",
           }
         ]
       });
@@ -328,6 +329,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [notifications, user, profile]);
 
   const unreadCount = visibleNotifications.filter(n => !n.read).length;
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      Badge.set({ count: unreadCount }).catch(() => {});
+    }
+  }, [unreadCount]);
+
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      LocalNotifications.createChannel({
+        id: "high_importance",
+        name: "High Importance",
+        importance: 5,
+        description: "Heads-up notifications for tasks",
+        sound: "default.wav",
+        visibility: 1,
+        vibration: true,
+      }).catch(() => {});
+    }
+  }, []);
 
   const markNotificationRead = useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
