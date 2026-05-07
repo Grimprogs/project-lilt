@@ -658,42 +658,54 @@ function AccessMatrix({
   // Reusable dept picker popover used in multiple columns
   const DeptPicker = ({ title, selected, onToggle, disabled, triggerLabel }: {
     title: string; selected: string[]; onToggle: (d: string) => void; disabled?: boolean; triggerLabel?: string;
-  }) => (
-    <Popover>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          disabled={disabled}
-          className={cn(
-            "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
-            selected.length > 0 ? "border-primary/40 bg-primary/10 text-primary" : "border-muted text-muted-foreground",
-            disabled && "opacity-40 cursor-not-allowed"
-          )}
-        >
-          {selected.length > 0 ? `${selected.length}d` : (triggerLabel || "Depts")}
-        </button>
-      </PopoverTrigger>
-      <PopoverContent className="w-48 p-3 z-[200]" side="right">
-        <div className="space-y-2">
-          <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</div>
-          <div className="grid gap-1 max-h-48 overflow-y-auto">
-            {departments.map(d => (
-              <label key={d} className="flex items-center justify-between gap-2 text-xs hover:bg-muted/40 px-1 rounded">
-                <span className="truncate">{d}</span>
-                <input
-                  type="checkbox"
-                  disabled={disabled}
-                  checked={selected.includes(d)}
-                  onChange={() => onToggle(d)}
-                  className="h-3 w-3"
-                />
-              </label>
-            ))}
+  }) => {
+    const [open, setOpen] = useState(false);
+    return (
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            disabled={disabled}
+            className={cn(
+              "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
+              selected.length > 0 ? "border-primary/40 bg-primary/10 text-primary" : "border-muted text-muted-foreground",
+              disabled && "opacity-40 cursor-not-allowed"
+            )}
+          >
+            {selected.length > 0 ? `${selected.length}d` : (triggerLabel || "Depts")}
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-48 p-3 z-[200]" side="right" onInteractOutside={(e) => e.preventDefault()}>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</div>
+              <button
+                type="button"
+                className="text-[10px] font-semibold text-primary hover:underline px-1"
+                onClick={() => setOpen(false)}
+              >
+                Done
+              </button>
+            </div>
+            <div className="grid gap-1 max-h-48 overflow-y-auto">
+              {departments.map(d => (
+                <label key={d} className="flex items-center justify-between gap-2 text-xs hover:bg-muted/40 px-1 rounded cursor-pointer">
+                  <span className="truncate">{d}</span>
+                  <input
+                    type="checkbox"
+                    disabled={disabled}
+                    checked={selected.includes(d)}
+                    onChange={() => onToggle(d)}
+                    className="h-3 w-3"
+                  />
+                </label>
+              ))}
+            </div>
           </div>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
+        </PopoverContent>
+      </Popover>
+    );
+  };
 
   // Separate person vs role keys for the role override tab
   const personKeys = type === 'role' ? filteredKeys.filter(k => k.startsWith('profile:')) : [];

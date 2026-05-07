@@ -1,15 +1,26 @@
+import { useMemo } from "react";
 import { useApp } from "@/context/AppContext";
 import { useTasks } from "@/hooks/useTasks";
 import { useProfile } from "@/hooks/useProfiles";
+import { useVisibilitySettings } from "@/hooks/useSettings";
+import { getVisibilitySettings } from "@/lib/permissions";
 import { TaskCard } from "@/components/TaskCard";
 import { CheckCircle2, Clock, AlertTriangle, ListTodo, Sparkles, Calendar } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Link } from "react-router-dom";
 
 export default function EmployeeDashboard() {
-  const { user } = useApp();
+  const { user, profile } = useApp();
   const { data: me } = useProfile(user?.employeeId);
   const { data: my = [] } = useTasks({ role: "employee", userId: user?.employeeId });
+  const { data: visibility = {} } = useVisibilitySettings();
+
+  const canSelfAssign = useMemo(() => {
+    if (!profile) return false;
+    if (profile.role === 'superadmin') return true;
+    const settings = getVisibilitySettings(profile, visibility);
+    return !!settings?.can_assign_self;
+  }, [profile, visibility]);
   
   const total = my.length;
   const done = my.filter(t => t.status === "completed").length;
@@ -72,7 +83,7 @@ export default function EmployeeDashboard() {
                 <Link to="/me/tasks" className="text-xs font-medium text-primary hover:underline">View all tasks</Link>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                {upcoming.map(t => <TaskCard key={t.id} task={t} showAssignee={false} canComplete compact />)}
+                {upcoming.map(t => <TaskCard key={t.id} task={t} showAssignee={false} canComplete canSelfAssign={canSelfAssign} compact />)}
                 {upcoming.length === 0 && (
                   <div className="surface-card p-10 text-center text-sm text-muted-foreground sm:col-span-2 border-dashed">
                     No pending tasks. You're all caught up! 🥂

@@ -21,6 +21,7 @@ interface AppCtx {
   notifications: AppNotification[];
   markNotificationRead: (id: string) => void;
   markAllNotificationsRead: () => void;
+  dismissNotification: (id: string) => void;
   visibleNotifications: AppNotification[];
   unreadCount: number;
 
@@ -123,7 +124,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   // ── Load notifications from Supabase ──────────────────────────────────────
   async function loadNotificationsFromDB(userId: string, role: Role) {
-    // Fetch notifications where user_id = profileId OR user_id = 'admin' (if admin/superadmin)
     let query = supabase
       .from("notifications")
       .select("*")
@@ -131,23 +131,49 @@ export function AppProvider({ children }: { children: ReactNode }) {
       .limit(50);
 
     if (role === "admin" || role === "superadmin") {
-      // Admins see notifications addressed to them specifically OR broadcast 'admin'
       query = query.or(`audience.eq.${userId},audience.eq.admin`);
     } else {
       query = query.eq("audience", userId);
     }
 
     const { data } = await query;
-    if (!data) return;
+    if (!data || data.length === 0) return;
+
+    // Collect missing actor_ids and task_ids to enrich old notifications
+    const missingActorIds = [...new Set(
+      data.filter((r: any) => !r.actor_name && r.actor_id).map((r: any) => r.actor_id)
+    )];
+    const missingTaskIds = [...new Set(
+      data.filter((r: any) => !r.task_title && r.task_id).map((r: any) => r.task_id)
+    )];
+
+    // Batch fetch profiles and tasks for enrichment
+    let profileMap: Record<string, string> = {};
+    let taskMap: Record<string, string> = {};
+
+    if (missingActorIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, name")
+        .in("id", missingActorIds);
+      if (profiles) profileMap = Object.fromEntries(profiles.map((p: any) => [p.id, p.name]));
+    }
+    if (missingTaskIds.length > 0) {
+      const { data: tasks } = await supabase
+        .from("tasks")
+        .select("id, title")
+        .in("id", missingTaskIds);
+      if (tasks) taskMap = Object.fromEntries(tasks.map((t: any) => [t.id, t.title]));
+    }
 
     const mapped: AppNotification[] = data.map((row: any) => ({
       id: row.id,
       type: row.type as NotificationType,
       taskId: row.task_id ?? "",
-      taskTitle: row.task_title ?? "—",
+      taskTitle: row.task_title || taskMap[row.task_id] || "Unknown task",
       taskDescription: undefined,
       actorId: row.actor_id ?? "",
-      actorName: row.actor_name ?? "Someone",
+      actorName: row.actor_name || profileMap[row.actor_id] || "System",
       audience: row.audience ?? row.user_id ?? "admin",
       createdAt: row.created_at,
       read: row.read,
@@ -290,18 +316,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [visibleNotifications]);
 
+  const dismissNotification = useCallback(async (id: string) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
+    await supabase.from("notifications").delete().eq("id", id);
+  }, []);
+
   const toggleTheme = useCallback(() => setTheme(t => t === "dark" ? "light" : "dark"), []);
 
   const value = useMemo<AppCtx>(() => ({
     user, profile, authLoading, login, logout,
     notifications,
-    markNotificationRead, markAllNotificationsRead, visibleNotifications, unreadCount,
+    markNotificationRead, markAllNotificationsRead, dismissNotification, visibleNotifications, unreadCount,
     theme, toggleTheme,
     notificationPermission: notifPerm,
     requestNotificationPermission,
     pushNotification,
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [user, profile, authLoading, notifications, visibleNotifications, unreadCount, theme, toggleTheme, notifPerm, requestNotificationPermission, pushNotification, markNotificationRead, markAllNotificationsRead]);
+  }), [user, profile, authLoading, notifications, visibleNotifications, unreadCount, theme, toggleTheme, notifPerm, requestNotificationPermission, pushNotification, markNotificationRead, markAllNotificationsRead, dismissNotification]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

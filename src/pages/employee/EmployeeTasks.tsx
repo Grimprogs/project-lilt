@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { useApp } from "@/context/AppContext";
 import { useTasks } from "@/hooks/useTasks";
+import { useVisibilitySettings } from "@/hooks/useSettings";
+import { getVisibilitySettings } from "@/lib/permissions";
 import { TaskCard } from "@/components/TaskCard";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
@@ -9,12 +11,21 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 export default function EmployeeTasks() {
   const { profile } = useApp();
   const { data: my = [] } = useTasks({ role: "employee", userId: profile?.id });
+  const { data: visibility = {} } = useVisibilitySettings();
   const [tab, setTab] = useState<"all" | any>("all");
   const [q, setQ] = useState("");
 
+  // Check self-assign permission
+  const canSelfAssign = useMemo(() => {
+    if (!profile) return false;
+    if (profile.role === 'superadmin') return true;
+    const settings = getVisibilitySettings(profile, visibility);
+    return !!settings?.can_assign_self;
+  }, [profile, visibility]);
+
   const filtered = useMemo(() => my.filter(t =>
     (tab === "all" || t.status === tab) &&
-    (q === "" || t.title.toLowerCase().includes(q.toLowerCase()) || t.description.toLowerCase().includes(q.toLowerCase()))
+    (q === "" || t.title.toLowerCase().includes(q.toLowerCase()) || (t.description ?? '').toLowerCase().includes(q.toLowerCase()))
   ), [my, tab, q]);
 
   const counts = {
@@ -51,7 +62,15 @@ export default function EmployeeTasks() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-        {filtered.map(t => <TaskCard key={t.id} task={t} showAssignee={false} canComplete />)}
+        {filtered.map(t => (
+          <TaskCard
+            key={t.id}
+            task={t}
+            showAssignee={false}
+            canComplete
+            canSelfAssign={canSelfAssign}
+          />
+        ))}
         {filtered.length === 0 && (
           <div className="surface-card p-10 text-center text-muted-foreground sm:col-span-2 xl:col-span-3">
             Nothing here. Enjoy the moment. ☕
