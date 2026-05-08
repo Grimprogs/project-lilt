@@ -19,7 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { useEffect, useMemo } from "react";
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
-  const { user, profile, logout, theme, toggleTheme, unreadCount } = useApp();
+  const { user, profile, logout, theme, toggleTheme, unreadCount, notificationPermission, requestNotificationPermission } = useApp();
   const [open, setOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const navigate = useNavigate();
@@ -136,6 +136,18 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
 
       {/* Right icons — always visible, compact on mobile */}
       <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5 shrink-0">
+        {/* Desktop Notification Prompt */}
+        {notificationPermission === "default" && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={requestNotificationPermission}
+            className="hidden lg:flex h-8 text-[10px] uppercase tracking-wider font-bold bg-primary/10 border-primary/20 text-primary hover:bg-primary/20"
+          >
+            Enable Alerts
+          </Button>
+        )}
+
         {/* Theme toggle */}
         <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9" aria-label="Toggle theme">
           {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
