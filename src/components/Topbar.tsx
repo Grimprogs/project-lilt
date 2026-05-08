@@ -9,10 +9,33 @@ import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { useTasks } from "@/hooks/useTasks";
+import { useProfiles } from "@/hooks/useProfiles";
+import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { user, profile, logout, theme, toggleTheme, unreadCount } = useApp();
   const [open, setOpen] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const navigate = useNavigate();
+
+  // Load data for search
+  const { data: tasks = [] } = useTasks(profile?.role === 'admin' ? { role: 'admin' } : { role: 'employee', userId: profile?.id });
+  const { data: profiles = [] } = useProfiles();
+
+  useEffect(() => {
+    const down = (e: KeyboardEvent) => {
+      if (e.key === "k" && (e.metaKey || e.ctrlKey)) {
+        e.preventDefault();
+        setSearchOpen((open) => !open);
+      }
+    };
+    document.addEventListener("keydown", down);
+    return () => document.removeEventListener("keydown", down);
+  }, []);
+
 
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-2 border-b bg-background/90 px-3 sm:px-5 backdrop-blur-xl">
@@ -23,11 +46,55 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
 
       {/* Search — desktop only */}
       <div className="hidden flex-1 max-w-md md:block">
-        <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input placeholder="Search tasks, people…" className="pl-9 bg-muted/50 border-transparent focus-visible:bg-background" />
+        <div 
+          className="relative flex items-center h-9 w-full rounded-md border border-input bg-muted/50 px-3 py-1 text-sm shadow-sm transition-colors cursor-text text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          onClick={() => setSearchOpen(true)}
+        >
+          <Search className="mr-2 h-4 w-4 shrink-0" />
+          <span className="flex-1 truncate text-left">Search tasks, people…</span>
+          <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+            <span className="text-xs">⌘</span>K
+          </kbd>
         </div>
       </div>
+
+      <CommandDialog open={searchOpen} onOpenChange={setSearchOpen}>
+        <CommandInput placeholder="Type a command or search..." />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          <CommandGroup heading="Tasks">
+            {tasks.slice(0, 10).map((task) => (
+              <CommandItem
+                key={task.id}
+                onSelect={() => {
+                  setSearchOpen(false);
+                  const path = profile?.role === 'admin' ? '/admin/tasks' : '/me/tasks';
+                  navigate(path, { state: { highlightTaskId: task.id } });
+                }}
+                className="flex flex-col items-start cursor-pointer"
+              >
+                <div className="font-medium truncate w-full">{task.title}</div>
+                {task.description && <div className="text-xs text-muted-foreground truncate w-full">{task.description}</div>}
+              </CommandItem>
+            ))}
+          </CommandGroup>
+          <CommandGroup heading="People">
+            {profiles.slice(0, 10).map((p) => (
+              <CommandItem
+                key={p.id}
+                onSelect={() => {
+                  setSearchOpen(false);
+                  const path = profile?.role === 'admin' ? `/admin/employees/${p.id}` : `/me/employees/${p.id}`;
+                  navigate(path);
+                }}
+                className="cursor-pointer"
+              >
+                {p.name} <span className="text-xs text-muted-foreground ml-2">({p.job_title})</span>
+              </CommandItem>
+            ))}
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
 
       {/* Right icons — always visible, compact on mobile */}
       <div className="ml-auto flex items-center gap-0.5 sm:gap-1.5 shrink-0">
