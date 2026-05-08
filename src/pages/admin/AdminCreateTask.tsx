@@ -5,6 +5,7 @@ import { useProfiles } from "@/hooks/useProfiles";
 import { useCreateTask } from "@/hooks/useTasks";
 import { useVisibilitySettings } from "@/hooks/useSettings";
 import { useMyDepartmentGrants, useDepartments } from "@/hooks/useDepartments";
+import { canAssignTask } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,40 +40,8 @@ export default function AdminCreateTask() {
 
     const viewer = profile;
 
-    const getViewerSettings = (p: any) => {
-      if (!p) return null;
-      const personKey = `profile:${p.id}`;
-      const roleKey = `${p.department}:${p.job_title}`;
-      return visibility[personKey] || visibility[roleKey] || visibility[p.department] || null;
-    };
-
-    const viewerSettings = getViewerSettings(viewer) || { sees: [], sees_jobs: false, sees_profiles: false };
-
     function canAssignTo(target: any) {
-      if (isSuperAdmin) return true;
-      if (!target) return false;
-      if (target.role === 'superadmin' && target.id !== viewer.id) return false;
-
-      // prevent assigning to self unless allowed
-      if (target.id === viewer.id && !viewerSettings.can_assign_self) return false;
-
-      // assignment permissions: prefer explicit assignable_depts if provided
-      const targetDept = (target.department || '').toLowerCase();
-      const assignable = (viewerSettings.assignable_depts || []).map((s: string) => s.toLowerCase());
-      if (assignable.length > 0) {
-        if (assignable.includes(targetDept)) return true;
-      } else if (viewerSettings.can_assign_tasks) {
-        // default to viewer's own department only
-        const ownDept = (viewer.department || '').toLowerCase();
-        if (ownDept && targetDept === ownDept) return true;
-      }
-
-      // fallback: check department grants (treat manage/create role grants as assign permission)
-      const targetDeptObj = departmentsData.find(d => d.name && d.name.toLowerCase() === (target.department || '').toLowerCase());
-      const targetDeptId = targetDeptObj?.id;
-      if (targetDeptId && myGrants.some(g => g.department_id === targetDeptId && (g.can_update_role || g.can_create_role))) return true;
-
-      return false;
+      return canAssignTask(profile, target, visibility, departmentsData, myGrants);
     }
 
     return visible.filter(e => canAssignTo(e));

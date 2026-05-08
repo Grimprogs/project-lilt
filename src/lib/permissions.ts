@@ -147,3 +147,49 @@ export function canDeleteProfile(
   const targetDept = (target.department || '').toLowerCase();
   return depts.map(d => d.toLowerCase()).includes(targetDept);
 }
+
+/** 
+ * Can viewer assign tasks to target?
+ */
+export function canAssignTask(
+  viewer: any,
+  target: any,
+  visibility: VisibilityMap,
+  departmentsData: any[],
+  myGrants: any[]
+): boolean {
+  if (!viewer) return false;
+  if (viewer.role === 'superadmin') return true;
+  if (!target) return false;
+  
+  // Superadmins can assign to anyone, others cannot assign to superadmins (except themselves if they were one, but they aren't)
+  if (target.role === 'superadmin' && target.id !== viewer.id) return false;
+
+  const viewerSettings = getVisibilitySettings(viewer, visibility) || { sees: [], sees_jobs: false, sees_profiles: false };
+
+  // 1. Self assignment check: Explicitly allow if can_assign_self is enabled
+  if (target.id === viewer.id) {
+    return !!viewerSettings.can_assign_self;
+  }
+
+  // 2. Department-based assignment
+  const targetDept = (target.department || '').toLowerCase();
+  const assignable = (viewerSettings.assignable_depts || []).map((s: string) => s.toLowerCase());
+
+  if (assignable.length > 0) {
+    if (assignable.includes(targetDept)) return true;
+  } else if (viewerSettings.can_assign_tasks) {
+    // default to viewer's own department only
+    const ownDept = (viewer.department || '').toLowerCase();
+    if (ownDept && targetDept === ownDept) return true;
+  }
+
+  // 3. Fallback: check department grants (treat manage/create role grants as assign permission)
+  const targetDeptObj = departmentsData.find(d => d.name && d.name.toLowerCase() === targetDept);
+  const targetDeptId = targetDeptObj?.id;
+  if (targetDeptId && myGrants.some(g => g.department_id === targetDeptId && (g.can_update_role || g.can_create_role))) {
+    return true;
+  }
+
+  return false;
+}

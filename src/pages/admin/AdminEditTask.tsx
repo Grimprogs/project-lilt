@@ -5,6 +5,7 @@ import { useProfiles } from "@/hooks/useProfiles";
 import { useTasks, useUpdateTask } from "@/hooks/useTasks";
 import { useVisibilitySettings } from "@/hooks/useSettings";
 import { useMyDepartmentGrants, useDepartments } from "@/hooks/useDepartments";
+import { canAssignTask } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -39,29 +40,8 @@ export default function AdminEditTask() {
   const employees = useMemo(() => {
     const visible = allEmployees.filter(e => isSuperAdmin || e.role !== 'superadmin');
     if (!profile) return visible;
-    const getViewerSettings = (p: any) => {
-      if (!p) return null;
-      const personKey = `profile:${p.id}`;
-      const roleKey = `${p.department}:${p.job_title}`;
-      return visibility[personKey] || visibility[roleKey] || visibility[p.department] || null;
-    };
-    const viewerSettings = getViewerSettings(profile) || { sees: [], sees_jobs: false, sees_profiles: false };
     function canAssignTo(target: any) {
-      if (isSuperAdmin) return true;
-      if (!target) return false;
-      if (target.role === 'superadmin' && target.id !== profile.id) return false;
-      if (target.id === profile.id && !viewerSettings.can_assign_self) return false;
-      const targetDept = (target.department || '').toLowerCase();
-      const assignable = (viewerSettings.assignable_depts || []).map((s: string) => s.toLowerCase());
-      if (assignable.length > 0) return assignable.includes(targetDept);
-      if (viewerSettings.can_assign_tasks) {
-        const ownDept = (profile.department || '').toLowerCase();
-        return ownDept && targetDept === ownDept;
-      }
-      const targetDeptObj = departmentsData.find(d => d.name?.toLowerCase() === (target.department || '').toLowerCase());
-      const targetDeptId = targetDeptObj?.id;
-      if (targetDeptId && myGrants.some(g => g.department_id === targetDeptId && (g.can_update_role || g.can_create_role))) return true;
-      return false;
+      return canAssignTask(profile, target, visibility, departmentsData, myGrants);
     }
     return visible.filter(e => canAssignTo(e));
   }, [allEmployees, isSuperAdmin, profile, visibility, myGrants, departmentsData]);
