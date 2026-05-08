@@ -12,8 +12,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CommandDialog, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { useTasks } from "@/hooks/useTasks";
 import { useProfiles } from "@/hooks/useProfiles";
+import { useVisibilitySettings } from "@/hooks/useSettings";
+import { useDepartments, useMyDepartmentGrants } from "@/hooks/useDepartments";
+import { canViewProfile, canAssignTask } from "@/lib/permissions";
 import { useNavigate } from "react-router-dom";
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 
 export function Topbar({ onMenu }: { onMenu: () => void }) {
   const { user, profile, logout, theme, toggleTheme, unreadCount } = useApp();
@@ -24,6 +27,35 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
   // Load data for search
   const { data: tasks = [] } = useTasks(profile?.role === 'admin' ? { role: 'admin' } : { role: 'employee', userId: profile?.id });
   const { data: profiles = [] } = useProfiles();
+  const { data: visibility = {} } = useVisibilitySettings();
+  const { data: departmentsData = [] } = useDepartments();
+  const { data: myGrants = [] } = useMyDepartmentGrants(profile?.id);
+
+  const isSuperAdmin = profile?.role === 'superadmin';
+
+  // Filter tasks based on hierarchy & permissions
+  const filteredTasks = useMemo(() => {
+    return tasks.filter((t) => {
+      if (isSuperAdmin) return true;
+      if (t.assignee_id === profile?.id) return true; // Always see own tasks
+
+      const assignee = profiles.find((p) => p.id === t.assignee_id);
+      if (assignee?.role === 'superadmin' && assignee.id !== profile?.id) return false;
+
+      return assignee && canAssignTask(profile, assignee, visibility, departmentsData, myGrants);
+    });
+  }, [tasks, profiles, profile, isSuperAdmin, visibility, departmentsData, myGrants]);
+
+  // Filter profiles based on hierarchy & permissions
+  const filteredProfiles = useMemo(() => {
+    return profiles.filter((p) => {
+      if (isSuperAdmin) return true;
+      if (p.id === profile?.id) return true; // Always see self
+      if (p.role === 'superadmin') return false; // Stealth mode
+
+      return canViewProfile(profile, p, myGrants, departmentsData, visibility);
+    });
+  }, [profiles, profile, isSuperAdmin, visibility, departmentsData, myGrants]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -62,37 +94,43 @@ export function Topbar({ onMenu }: { onMenu: () => void }) {
         <CommandInput placeholder="Type a command or search..." />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
-          <CommandGroup heading="Tasks">
-            {tasks.slice(0, 10).map((task) => (
-              <CommandItem
-                key={task.id}
-                onSelect={() => {
-                  setSearchOpen(false);
-                  const path = profile?.role === 'admin' ? '/admin/tasks' : '/me/tasks';
-                  navigate(path, { state: { highlightTaskId: task.id } });
-                }}
-                className="flex flex-col items-start cursor-pointer"
-              >
-                <div className="font-medium truncate w-full">{task.title}</div>
-                {task.description && <div className="text-xs text-muted-foreground truncate w-full">{task.description}</div>}
-              </CommandItem>
-            ))}
-          </CommandGroup>
-          <CommandGroup heading="People">
-            {profiles.slice(0, 10).map((p) => (
-              <CommandItem
-                key={p.id}
-                onSelect={() => {
-                  setSearchOpen(false);
-                  const path = profile?.role === 'admin' ? `/admin/employees/${p.id}` : `/me/employees/${p.id}`;
-                  navigate(path);
-                }}
-                className="cursor-pointer"
-              >
-                {p.name} <span className="text-xs text-muted-foreground ml-2">({p.job_title})</span>
-              </CommandItem>
-            ))}
-          </CommandGroup>
+          
+          {filteredTasks.length > 0 && (
+            <CommandGroup heading="Tasks">
+              {filteredTasks.slice(0, 10).map((task) => (
+                <CommandItem
+                  key={task.id}
+                  onSelect={() => {
+                    setSearchOpen(false);
+                    const path = profile?.role === 'admin' ? '/admin/tasks' : '/me/tasks';
+                    navigate(path, { state: { highlightTaskId: task.id } });
+                  }}
+                  className="flex flex-col items-start cursor-pointer"
+                >
+                  <div className="font-medium truncate w-full">{task.title}</div>
+                  {task.description && <div className="text-xs text-muted-foreground truncate w-full">{task.description}</div>}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
+
+          {filteredProfiles.length > 0 && (
+            <CommandGroup heading="People">
+              {filteredProfiles.slice(0, 10).map((p) => (
+                <CommandItem
+                  key={p.id}
+                  onSelect={() => {
+                    setSearchOpen(false);
+                    const path = profile?.role === 'admin' ? `/admin/employees/${p.id}` : `/me/employees/${p.id}`;
+                    navigate(path);
+                  }}
+                  className="cursor-pointer"
+                >
+                  {p.name} <span className="text-xs text-muted-foreground ml-2">({p.job_title})</span>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          )}
         </CommandList>
       </CommandDialog>
 
