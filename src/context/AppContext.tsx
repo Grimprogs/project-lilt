@@ -5,6 +5,7 @@ import type { Profile } from "@/integrations/supabase/types";
 import { Capacitor } from "@capacitor/core";
 import { LocalNotifications } from "@capacitor/local-notifications";
 import { Badge } from "@capawesome/capacitor-badge";
+import { useRealtimeTasks } from "@/hooks/useNotifications";
 
 interface SessionUser {
   role: Role;
@@ -86,8 +87,6 @@ async function fireNativeNotification(title: string, body: string) {
             title,
             body,
             id: Math.floor(Math.random() * 2000000000),
-            smallIcon: "ic_stat_icon_config_sample",
-            iconColor: "#7C3AED",
             channelId: "ztasks_high",
           }
         ]
@@ -137,6 +136,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     if (saved === "dark" || saved === "light") return saved;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
+
+  // Enable realtime subscriptions for tasks
+  useRealtimeTasks();
 
   // ── Supabase Auth ─────────────────────────────────────────────────────────
   useEffect(() => {
@@ -368,7 +370,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (Capacitor.isNativePlatform()) {
-      Badge.set({ count: unreadCount }).catch(() => {});
+      Badge.set({ count: unreadCount }).catch(() => { });
     }
   }, [unreadCount]);
 
@@ -403,7 +405,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     notificationPermission: notifPerm,
     requestNotificationPermission,
     pushNotification,
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }), [user, profile, authLoading, notifications, visibleNotifications, unreadCount, theme, toggleTheme, notifPerm, requestNotificationPermission, pushNotification, markNotificationRead, markAllNotificationsRead, dismissNotification]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
