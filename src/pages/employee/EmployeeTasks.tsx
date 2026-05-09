@@ -107,6 +107,7 @@ export default function EmployeeTasks() {
               task={t} 
               showAssignee={false} 
               canComplete 
+              canManage={t.created_by === profile?.id}
               canApprove={t.approver_ids?.includes(profile?.id ?? "")}
               canSelfAssign={canSelfAssign}
               id={`task-${t.id}`}
@@ -194,6 +195,7 @@ export default function EmployeeTasks() {
           task={selectedTask}
           open={!!selectedTask}
           onOpenChange={(open) => !open && setSelectedTask(null)}
+          canManage={selectedTask.created_by === profile?.id}
           canComplete
           canApprove={selectedTask.approver_ids?.includes(profile?.id ?? "")}
           canSelfAssign={canSelfAssign}

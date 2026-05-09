@@ -89,6 +89,7 @@ export default function EmployeeDashboard() {
                     task={t} 
                     showAssignee={false} 
                     canComplete 
+                    canManage={t.created_by === profile?.id}
                     canApprove={t.approver_ids?.includes(profile?.id ?? "")}
                     canSelfAssign={canSelfAssign} 
                     compact 

@@ -122,11 +122,18 @@ export default function AdminTasks() {
   const filtered = useMemo(() => {
     const canManageTask = (task: any) => {
       if (isSuperAdmin) return true;
-      if (task.assignee_id === profile?.id) return true; // Always see own tasks
+      // 1. Participant Access: Always see tasks you are part of
+      if (task.assignee_id === profile?.id) return true;
+      if (task.created_by === profile?.id) return true;
+      if (task.approver_ids?.includes(profile?.id ?? "")) return true;
+      if (task.visible_to?.includes(profile?.id ?? "")) return true;
+
+      // 2. Manager Access: See tasks in departments you have explicit 'Assign' or 'Sees' rights for
       const assignee = profiles.find(p => p.id === task.assignee_id);
       const assigneeDept = (assignee?.department || '').toLowerCase();
-      if (!allowedAssignDepts) return false;
-      return allowedAssignDepts.includes(assigneeDept);
+      if (allowedAssignDepts?.includes(assigneeDept)) return true;
+      
+      return false;
     };
 
     return allTasks.filter(t => {
@@ -369,7 +376,7 @@ export default function AdminTasks() {
           {filtered.map(t => {
             const assignee = profiles.find(p => p.id === t.assignee_id);
             const assigneeDept = (assignee?.department || '').toLowerCase();
-            const canManageTask = isSuperAdmin || (allowedAssignDepts?.includes(assigneeDept) ?? false);
+            const canManageTask = isSuperAdmin || (allowedAssignDepts?.includes(assigneeDept) ?? false) || t.created_by === profile?.id;
             return (
               <TaskCard
                 key={t.id}
@@ -478,7 +485,7 @@ export default function AdminTasks() {
           task={selectedTask}
           open={!!selectedTask}
           onOpenChange={(open) => !open && setSelectedTask(null)}
-          canManage={isSuperAdmin || (allowedAssignDepts?.includes((profiles.find(p => p.id === selectedTask.assignee_id)?.department || '').toLowerCase()) ?? false)}
+          canManage={isSuperAdmin || (allowedAssignDepts?.includes((profiles.find(p => p.id === selectedTask.assignee_id)?.department || '').toLowerCase()) ?? false) || selectedTask.created_by === profile?.id}
           canApprove={isSuperAdmin || (allowedAssignDepts?.includes((profiles.find(p => p.id === selectedTask.assignee_id)?.department || '').toLowerCase()) ?? false) || selectedTask.approver_ids?.includes(profile?.id ?? "")}
           canComplete={selectedTask.assignee_id === profile?.id}
         />
