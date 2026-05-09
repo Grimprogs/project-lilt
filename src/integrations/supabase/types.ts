@@ -27,6 +27,7 @@ export interface Task {
   status: TaskStatus;
   assignee_id: string | null;
   created_by: string | null;
+  approved_by_id: string | null;
   due_date: string;    // ISO date
   due_time: string;    // HH:mm
   started_at: string | null;

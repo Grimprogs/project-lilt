@@ -15,7 +15,7 @@ import { UserAvatar } from "@/components/UserAvatar";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Check, ChevronsUpDown, ArrowLeft, Pencil } from "lucide-react";
+import { CalendarIcon, Check, ChevronsUpDown, ArrowLeft, Pencil, ShieldCheck } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Priority } from "@/data/seed";
@@ -55,6 +55,12 @@ export default function AdminEditTask() {
   const [startDate, setStartDate] = useState<Date>(new Date());
   const [dueDate, setDueDate] = useState<Date>(new Date());
   const [dueTime, setDueTime] = useState("17:00");
+  const [approverId, setApproverId] = useState("");
+  const [openApprover, setOpenApprover] = useState(false);
+
+  // Self-task: auto-lock approver to self
+  const isSelfTask = assigneeId === profile?.id;
+  const effectiveApproverId = isSelfTask ? (profile?.id ?? "") : approverId;
 
   // Pre-fill when task loads
   useEffect(() => {
@@ -65,6 +71,7 @@ export default function AdminEditTask() {
     setPriority((task.priority as Priority) ?? "medium");
     if (task.due_date) setDueDate(new Date(task.due_date));
     setDueTime(task.due_time ?? "17:00");
+    setApproverId(task.approved_by_id ?? "");
   }, [task]);
 
   if (!task) {
@@ -87,6 +94,7 @@ export default function AdminEditTask() {
         priority,
         due_date: dueDate.toISOString().slice(0, 10),
         due_time: dueTime,
+        approved_by_id: effectiveApproverId || null,
       }
     }, {
       onSuccess: () => {
@@ -191,6 +199,73 @@ export default function AdminEditTask() {
           <div className="space-y-1.5">
             <Label>Due time</Label>
             <Input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} />
+          </div>
+
+          {/* Approver picker */}
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="flex items-center gap-1.5">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              Who can approve this task?
+            </Label>
+            {isSelfTask ? (
+              <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50 text-sm text-muted-foreground">
+                <UserAvatar name={profile?.name ?? ""} color={profile?.avatar_color ?? undefined} size="sm" />
+                <span>{profile?.name} (self-task — auto-approved)</span>
+              </div>
+            ) : (
+              <Popover open={openApprover} onOpenChange={setOpenApprover}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openApprover}
+                    className="w-full justify-between font-normal"
+                  >
+                    {approverId
+                      ? (() => {
+                          const emp = employees.find((e) => e.id === approverId);
+                          return emp ? `${emp.name} · ${emp.job_title ?? "Employee"}` : "Select approver";
+                        })()
+                      : "Select approver (optional)"}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder="Search approver..." />
+                    <CommandList>
+                      <CommandEmpty>No user found.</CommandEmpty>
+                      <CommandGroup>
+                        <CommandItem
+                          value="__none__"
+                          onSelect={() => { setApproverId(""); setOpenApprover(false); }}
+                          className="text-xs text-muted-foreground"
+                        >
+                          <Check className={cn("h-4 w-4 shrink-0", !approverId ? "opacity-100" : "opacity-0")} />
+                          No specific approver (use department managers)
+                        </CommandItem>
+                        {employees.map((e) => (
+                          <CommandItem
+                            key={e.id}
+                            value={`${e.name} ${e.username} ${e.job_title}`}
+                            onSelect={() => { setApproverId(e.id); setOpenApprover(false); }}
+                            className="flex items-center gap-2"
+                          >
+                            <Check className={cn("h-4 w-4 shrink-0", approverId === e.id ? "opacity-100" : "opacity-0")} />
+                            <UserAvatar name={e.name} color={e.avatar_color ?? undefined} size="sm" />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{e.name}</span>
+                              <span className="text-[10px] text-muted-foreground leading-none">{e.job_title ?? "Employee"}</span>
+                            </div>
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            )}
+            <p className="text-[10px] text-muted-foreground">Choose who can approve when the assignee requests task completion.</p>
           </div>
         </div>
 

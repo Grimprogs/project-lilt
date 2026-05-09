@@ -67,6 +67,7 @@ export function useCreateTask() {
     mutationFn: async (input: {
       title: string; description?: string; assignee_id: string;
       priority: TaskPriority; due_date: string; due_time: string; created_by?: string;
+      approved_by_id?: string;
     }) => {
       const { data, error } = await supabase.from('tasks').insert(input as any).select().single();
       if (error) throw error;
@@ -111,7 +112,7 @@ export function useUpdateTask() {
   return useMutation({
     mutationFn: async ({ id, patch }: {
       id: string;
-      patch: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'due_date' | 'due_time' | 'assignee_id'>>;
+      patch: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'due_date' | 'due_time' | 'assignee_id' | 'approved_by_id'>>;
     }) => {
       const { data, error } = await supabase.from('tasks').update(patch as any).eq('id', id).select().single();
       if (error) throw error;
@@ -245,12 +246,19 @@ export function useTaskActions() {
     onSuccess: (_, { task }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       if (!task) return;
-      // Find the assignee's dept so we can route to hierarchy-aware approvers
-      const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
-      const dept = assignee?.department ?? '';
-      const approverIds = getApproverIds(dept, visibilityMap, allProfiles);
 
-      // Notify each specific approver by their profile ID (which includes superadmins)
+      // If a specific approver was designated on this task, only notify them
+      // Otherwise fall back to hierarchy-aware department approvers
+      let approverIds: string[];
+      if (task.approved_by_id) {
+        approverIds = [task.approved_by_id];
+      } else {
+        const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
+        const dept = assignee?.department ?? '';
+        approverIds = getApproverIds(dept, visibilityMap, allProfiles);
+      }
+
+      // Notify each approver
       approverIds.forEach(approverProfileId => {
         pushNotification({
           type: 'completion_requested',
@@ -273,9 +281,15 @@ export function useTaskActions() {
     onSuccess: (_, { task }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       if (!task?.assignee_id) return;
-      const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
-      const dept = assignee?.department ?? '';
-      const approvers = getApproverIds(dept, visibilityMap, allProfiles);
+
+      let approvers: string[];
+      if (task.approved_by_id) {
+        approvers = [task.approved_by_id];
+      } else {
+        const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
+        const dept = assignee?.department ?? '';
+        approvers = getApproverIds(dept, visibilityMap, allProfiles);
+      }
       
       const targets = new Set([task.assignee_id, ...approvers]);
       targets.forEach(audience => {
@@ -299,9 +313,15 @@ export function useTaskActions() {
     onSuccess: (_, { task }) => {
       qc.invalidateQueries({ queryKey: ['tasks'] });
       if (!task?.assignee_id) return;
-      const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
-      const dept = assignee?.department ?? '';
-      const approvers = getApproverIds(dept, visibilityMap, allProfiles);
+
+      let approvers: string[];
+      if (task.approved_by_id) {
+        approvers = [task.approved_by_id];
+      } else {
+        const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
+        const dept = assignee?.department ?? '';
+        approvers = getApproverIds(dept, visibilityMap, allProfiles);
+      }
       
       const targets = new Set([task.assignee_id, ...approvers]);
       targets.forEach(audience => {
