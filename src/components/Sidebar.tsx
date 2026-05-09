@@ -96,9 +96,9 @@ export function Sidebar({ open, onClose }: Props) {
         )}
       >
         <div className="flex h-16 items-center gap-2.5 px-5 border-b border-sidebar-border">
-          <img src="/ztasks-logo.jpg" alt="Z-Tasksforce Logo" className="h-9 w-9 rounded-xl object-cover shadow-glow" />
+          <img src="/ztasks-logo.jpg" alt="ZeexTaskforce Logo" className="h-9 w-9 rounded-xl object-cover shadow-glow" />
           <div>
-            <div className="font-display text-lg font-bold leading-none">Z-Tasksforce</div>
+            <div className="font-display text-lg font-bold leading-none">ZeexTaskforce</div>
             <div className="text-[11px] uppercase tracking-wider text-muted-foreground mt-0.5">
               {user?.role === "superadmin" ? "Master Admin" : user?.role === "admin" ? "Admin workspace" : "Employee"}
             </div>

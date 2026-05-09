@@ -298,7 +298,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           });
           // Fire OS notification
           fireNativeNotification(
-            "Z-Tasksforce",
+            "ZeexTaskforce",
             `${notif.actorName} ${VERB[notif.type] ?? notif.type} "${notif.taskTitle}"`
           );
         }
