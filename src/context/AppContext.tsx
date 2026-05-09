@@ -35,6 +35,16 @@ interface AppCtx {
   notificationPermission: NotificationPermission | "unsupported";
   requestNotificationPermission: () => Promise<void>;
   pushNotification: (n: Omit<AppNotification, "id" | "createdAt" | "read">) => void;
+  pushActivityAndNotify: (n: {
+    type: NotificationType;
+    taskId?: string;
+    taskTitle?: string;
+    taskDescription?: string;
+    actorId: string;
+    actorName: string;
+    audiences: string[];
+    metadata?: any;
+  }) => void;
 }
 
 const Ctx = createContext<AppCtx | null>(null);
@@ -192,21 +202,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // ── Load notifications from Supabase ──────────────────────────────────────
   async function loadNotificationsFromDB(userId: string, role: Role) {
     let query = supabase
-      .from("notifications")
-      .select("*")
+      .from("user_notifications")
+      .select("*, activity:activity_logs(*)")
       .order("created_at", { ascending: false })
       .limit(50)
-      .eq("audience", userId);
+      .eq("user_id", userId);
 
     const { data } = await query;
     if (!data || data.length === 0) return;
 
-    // Collect missing actor_ids and task_ids to enrich old notifications
+    // Collect missing actor_ids and task_ids to enrich old notifications if necessary
     const missingActorIds = [...new Set(
-      data.filter((r: any) => !r.actor_name && r.actor_id).map((r: any) => r.actor_id)
+      data.filter((r: any) => r.activity && !r.activity.actor_name && r.activity.actor_id).map((r: any) => r.activity.actor_id)
     )];
     const missingTaskIds = [...new Set(
-      data.filter((r: any) => !r.task_title && r.task_id).map((r: any) => r.task_id)
+      data.filter((r: any) => r.activity && !r.activity.task_title && r.activity.task_id).map((r: any) => r.activity.task_id)
     )];
 
     // Batch fetch profiles and tasks for enrichment
@@ -228,18 +238,21 @@ export function AppProvider({ children }: { children: ReactNode }) {
       if (tasks) taskMap = Object.fromEntries(tasks.map((t: any) => [t.id, t.title]));
     }
 
-    const mapped: AppNotification[] = data.map((row: any) => ({
-      id: row.id,
-      type: row.type as NotificationType,
-      taskId: row.task_id ?? "",
-      taskTitle: row.task_title || taskMap[row.task_id] || "Unknown task",
-      taskDescription: undefined,
-      actorId: row.actor_id ?? "",
-      actorName: row.actor_name || profileMap[row.actor_id] || "System",
-      audience: row.audience ?? row.user_id ?? "admin",
-      createdAt: row.created_at,
-      read: row.read,
-    }));
+    const mapped: AppNotification[] = data.map((row: any) => {
+      const act = row.activity || {};
+      return {
+        id: row.id,
+        type: act.type as NotificationType,
+        taskId: act.task_id ?? "",
+        taskTitle: act.task_title || taskMap[act.task_id] || "Unknown task",
+        taskDescription: act.task_description,
+        actorId: act.actor_id ?? "",
+        actorName: act.actor_name || profileMap[act.actor_id] || "System",
+        audience: row.user_id,
+        createdAt: row.created_at,
+        read: row.read,
+      };
+    });
 
     setNotifications(mapped);
   }
@@ -258,22 +271,27 @@ export function AppProvider({ children }: { children: ReactNode }) {
         {
           event: "INSERT",
           schema: "public",
-          table: "notifications",
-          filter: `audience=eq.${profile.id}`,
+          table: "user_notifications",
+          filter: `user_id=eq.${profile.id}`,
         },
-        (payload) => {
+        async (payload) => {
           const row = payload.new as any;
+          // Fetch the associated activity log to get full details
+          const { data: act } = await supabase.from('activity_logs').select('*').eq('id', row.activity_id).single();
+          if (!act) return;
+
           const notif: AppNotification = {
             id: row.id,
-            type: row.type as NotificationType,
-            taskId: row.task_id ?? "",
-            taskTitle: row.task_title ?? "—",
-            actorId: row.actor_id ?? "",
-            actorName: row.actor_name ?? "Someone",
-            audience: row.audience ?? row.user_id ?? "admin",
+            type: act.type as NotificationType,
+            taskId: act.task_id ?? "",
+            taskTitle: act.task_title ?? "—",
+            actorId: act.actor_id ?? "",
+            actorName: act.actor_name ?? "Someone",
+            audience: row.user_id,
             createdAt: row.created_at,
             read: false,
           };
+          
           setNotifications(prev => {
             if (prev.some(n => n.id === notif.id)) return prev;
             return [notif, ...prev].slice(0, 200);
@@ -290,7 +308,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         {
           event: "DELETE",
           schema: "public",
-          table: "notifications",
+          table: "user_notifications",
         },
         (payload) => {
           setNotifications(prev => prev.filter(n => n.id !== payload.old.id));
@@ -329,33 +347,78 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setNotifPerm(result);
   }, []);
 
-  // ── In-App push (also persists to Supabase for cross-user delivery) ───────
+  // ── In-App push (Legacy - do not use for new logic) ───────
   const pushNotification = useCallback((n: Omit<AppNotification, "id" | "createdAt" | "read">) => {
-    // Optimistically add to local state
-    const localNotif: AppNotification = {
-      ...n,
-      id: "n" + Math.random().toString(36).slice(2, 9),
-      createdAt: new Date().toISOString(),
-      read: false,
-    };
-    setNotifications(prev => [localNotif, ...prev].slice(0, 200));
-
-    // Persist to Supabase so the recipient's realtime subscription picks it up
-    // audience is a profile UUID
-    const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(n.audience);
-    supabase.from("notifications").insert({
-      user_id: isUUID ? n.audience : null,
-      audience: n.audience,
-      task_id: n.taskId || null,
-      type: n.type as any,
-      read: false,
-      actor_name: n.actorName,
-      task_title: n.taskTitle,
-      actor_id: n.actorId,
-    }).then(({ error }) => {
-      if (error) console.warn("Failed to persist notification:", error.message);
+    // This is kept for backwards compatibility where it hasn't been updated yet.
+    // It creates an activity log and a user notification.
+    pushActivityAndNotify({
+      type: n.type,
+      taskId: n.taskId,
+      taskTitle: n.taskTitle,
+      actorId: n.actorId,
+      actorName: n.actorName,
+      audiences: [n.audience]
     });
   }, []);
+
+  const pushActivityAndNotify = useCallback(async (n: {
+    type: NotificationType;
+    taskId?: string;
+    taskTitle?: string;
+    taskDescription?: string;
+    actorId: string;
+    actorName: string;
+    audiences: string[];
+    metadata?: any;
+  }) => {
+    if (!n.audiences || n.audiences.length === 0) return;
+
+    // 1. Create activity log
+    const { data: act, error: actError } = await supabase.from('activity_logs').insert({
+      type: n.type,
+      actor_id: n.actorId,
+      actor_name: n.actorName,
+      task_id: n.taskId,
+      task_title: n.taskTitle,
+      task_description: n.taskDescription,
+      metadata: n.metadata || {}
+    }).select().single();
+
+    if (actError || !act) {
+      console.error("Failed to insert activity log:", actError);
+      return;
+    }
+
+    // 2. Create user notifications
+    // Filter out invalid UUIDs just in case
+    const validAudiences = n.audiences.filter(a => /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(a));
+    if (validAudiences.length === 0) return;
+
+    const notificationsToInsert = validAudiences.map(userId => ({
+      activity_id: act.id,
+      user_id: userId,
+      read: false
+    }));
+
+    const { error: notifError } = await supabase.from('user_notifications').insert(notificationsToInsert);
+    if (notifError) console.error("Failed to insert user notifications:", notifError);
+    
+    // 3. Optimistic local update for the current user
+    if (validAudiences.includes(profile?.id ?? "")) {
+      const localNotif: AppNotification = {
+        id: "n" + Math.random().toString(36).slice(2, 9),
+        type: n.type,
+        taskId: n.taskId || "",
+        taskTitle: n.taskTitle || "—",
+        actorId: n.actorId,
+        actorName: n.actorName,
+        audience: profile?.id ?? "",
+        createdAt: new Date().toISOString(),
+        read: false,
+      };
+      setNotifications(prev => [localNotif, ...prev].slice(0, 200));
+    }
+  }, [profile?.id]);
 
   // ── Visible notifications (for current user) ──────────────────────────────
   // Everyone sees:
@@ -379,20 +442,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const markNotificationRead = useCallback(async (id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     // Also mark as read in DB
-    await supabase.from("notifications").update({ read: true }).eq("id", id);
+    await supabase.from("user_notifications").update({ read: true }).eq("id", id);
   }, []);
 
   const markAllNotificationsRead = useCallback(async () => {
     const ids = visibleNotifications.filter(n => !n.read).map(n => n.id);
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     if (ids.length > 0) {
-      await supabase.from("notifications").update({ read: true }).in("id", ids);
+      await supabase.from("user_notifications").update({ read: true }).in("id", ids);
     }
   }, [visibleNotifications]);
 
   const dismissNotification = useCallback(async (id: string) => {
     setNotifications(prev => prev.filter(n => n.id !== id));
-    await supabase.from("notifications").delete().eq("id", id);
+    await supabase.from("user_notifications").delete().eq("id", id);
   }, []);
 
   const toggleTheme = useCallback(() => setTheme(t => t === "dark" ? "light" : "dark"), []);
@@ -405,8 +468,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
     notificationPermission: notifPerm,
     requestNotificationPermission,
     pushNotification,
+    pushActivityAndNotify,
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }), [user, profile, authLoading, notifications, visibleNotifications, unreadCount, theme, toggleTheme, notifPerm, requestNotificationPermission, pushNotification, markNotificationRead, markAllNotificationsRead, dismissNotification]);
+  }), [user, profile, authLoading, notifications, visibleNotifications, unreadCount, theme, toggleTheme, notifPerm, requestNotificationPermission, pushNotification, pushActivityAndNotify, markNotificationRead, markAllNotificationsRead, dismissNotification]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -83,7 +83,17 @@ export default function EmployeeDashboard() {
                 <Link to="/me/tasks" className="text-xs font-medium text-primary hover:underline">View all tasks</Link>
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
-                {upcoming.map(t => <TaskCard key={t.id} task={t} showAssignee={false} canComplete canSelfAssign={canSelfAssign} compact />)}
+                {upcoming.map(t => (
+                  <TaskCard 
+                    key={t.id} 
+                    task={t} 
+                    showAssignee={false} 
+                    canComplete 
+                    canApprove={t.approver_ids?.includes(profile?.id ?? "")}
+                    canSelfAssign={canSelfAssign} 
+                    compact 
+                  />
+                ))}
                 {upcoming.length === 0 && (
                   <div className="surface-card p-10 text-center text-sm text-muted-foreground sm:col-span-2 border-dashed">
                     No pending tasks. You're all caught up! 🥂

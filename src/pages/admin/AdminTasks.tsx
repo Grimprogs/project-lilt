@@ -375,7 +375,7 @@ export default function AdminTasks() {
                 key={t.id}
                 task={t}
                 canManage={canManageTask}
-                canApprove={canManageTask}
+                canApprove={canManageTask || t.approver_ids?.includes(profile?.id ?? "")}
                 canComplete={t.assignee_id === profile?.id}
                 id={`task-${t.id}`}
                 highlighted={highlightTaskId === t.id}
@@ -479,7 +479,7 @@ export default function AdminTasks() {
           open={!!selectedTask}
           onOpenChange={(open) => !open && setSelectedTask(null)}
           canManage={isSuperAdmin || (allowedAssignDepts?.includes((profiles.find(p => p.id === selectedTask.assignee_id)?.department || '').toLowerCase()) ?? false)}
-          canApprove={isSuperAdmin || (allowedAssignDepts?.includes((profiles.find(p => p.id === selectedTask.assignee_id)?.department || '').toLowerCase()) ?? false)}
+          canApprove={isSuperAdmin || (allowedAssignDepts?.includes((profiles.find(p => p.id === selectedTask.assignee_id)?.department || '').toLowerCase()) ?? false) || selectedTask.approver_ids?.includes(profile?.id ?? "")}
           canComplete={selectedTask.assignee_id === profile?.id}
         />
       )}

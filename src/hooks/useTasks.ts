@@ -67,7 +67,8 @@ export function useCreateTask() {
     mutationFn: async (input: {
       title: string; description?: string; assignee_id: string;
       priority: TaskPriority; due_date: string; due_time: string; created_by?: string;
-      approved_by_id?: string;
+      approver_ids?: string[];
+      visible_to?: string[];
     }) => {
       const { data, error } = await supabase.from('tasks').insert(input as any).select().single();
       if (error) throw error;
@@ -112,7 +113,7 @@ export function useUpdateTask() {
   return useMutation({
     mutationFn: async ({ id, patch }: {
       id: string;
-      patch: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'due_date' | 'due_time' | 'assignee_id' | 'approved_by_id'>>;
+      patch: Partial<Pick<Task, 'title' | 'description' | 'priority' | 'due_date' | 'due_time' | 'assignee_id' | 'approver_ids' | 'visible_to'>>;
     }) => {
       const { data, error } = await supabase.from('tasks').update(patch as any).eq('id', id).select().single();
       if (error) throw error;
@@ -184,7 +185,7 @@ function getApproverIds(
 
 export function useTaskActions() {
   const qc = useQueryClient();
-  const { pushNotification, user } = useApp();
+  const { pushActivityAndNotify, user } = useApp();
   const { data: visibilityMap = {} } = useVisibilitySettings();
   const { data: allProfiles = [] } = useProfiles();
 
@@ -204,15 +205,13 @@ export function useTaskActions() {
       const dept = assignee?.department ?? '';
       const approvers = getApproverIds(dept, visibilityMap, allProfiles);
       
-      approvers.forEach(audience => {
-        pushNotification({
-          type: 'task_started',
-          actorId: user?.employeeId ?? '',
-          actorName: user?.name ?? 'Employee',
-          taskTitle: task.title,
-          taskId: task.id,
-          audience,
-        });
+      pushActivityAndNotify({
+        type: 'task_started',
+        actorId: user?.employeeId ?? '',
+        actorName: user?.name ?? 'Employee',
+        taskTitle: task.title,
+        taskId: task.id,
+        audiences: approvers,
       });
     },
   });
@@ -227,15 +226,13 @@ export function useTaskActions() {
       const dept = assignee?.department ?? '';
       const approvers = getApproverIds(dept, visibilityMap, allProfiles);
 
-      approvers.forEach(audience => {
-        pushNotification({
-          type: 'task_stopped',
-          actorId: user?.employeeId ?? '',
-          actorName: user?.name ?? 'Employee',
-          taskTitle: task.title,
-          taskId: task.id,
-          audience,
-        });
+      pushActivityAndNotify({
+        type: 'task_stopped',
+        actorId: user?.employeeId ?? '',
+        actorName: user?.name ?? 'Employee',
+        taskTitle: task.title,
+        taskId: task.id,
+        audiences: approvers,
       });
     },
   });
@@ -250,8 +247,8 @@ export function useTaskActions() {
       // If a specific approver was designated on this task, only notify them
       // Otherwise fall back to hierarchy-aware department approvers
       let approverIds: string[];
-      if (task.approved_by_id) {
-        approverIds = [task.approved_by_id];
+      if (task.approver_ids && task.approver_ids.length > 0) {
+        approverIds = task.approver_ids;
       } else {
         const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
         const dept = assignee?.department ?? '';
@@ -259,16 +256,14 @@ export function useTaskActions() {
       }
 
       // Notify each approver
-      approverIds.forEach(approverProfileId => {
-        pushNotification({
-          type: 'completion_requested',
-          actorId: user?.employeeId ?? '',
-          actorName: user?.name ?? 'Employee',
-          taskTitle: task.title,
-          taskDescription: task.description ?? undefined,
-          taskId: task.id,
-          audience: approverProfileId,
-        });
+      pushActivityAndNotify({
+        type: 'completion_requested',
+        actorId: user?.employeeId ?? '',
+        actorName: user?.name ?? 'Employee',
+        taskTitle: task.title,
+        taskDescription: task.description ?? undefined,
+        taskId: task.id,
+        audiences: approverIds,
       });
     },
   });
@@ -283,24 +278,22 @@ export function useTaskActions() {
       if (!task?.assignee_id) return;
 
       let approvers: string[];
-      if (task.approved_by_id) {
-        approvers = [task.approved_by_id];
+      if (task.approver_ids && task.approver_ids.length > 0) {
+        approvers = task.approver_ids;
       } else {
         const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
         const dept = assignee?.department ?? '';
         approvers = getApproverIds(dept, visibilityMap, allProfiles);
       }
       
-      const targets = new Set([task.assignee_id, ...approvers]);
-      targets.forEach(audience => {
-        pushNotification({
-          type: 'completion_approved',
-          actorId: user?.employeeId ?? '',
-          actorName: user?.name ?? 'Admin',
-          taskTitle: task.title,
-          taskId: task.id,
-          audience,
-        });
+      const targets = new Set([task.assignee_id, ...approvers, ...(task.visible_to || [])].filter(Boolean) as string[]);
+      pushActivityAndNotify({
+        type: 'completion_approved',
+        actorId: user?.employeeId ?? '',
+        actorName: user?.name ?? 'Admin',
+        taskTitle: task.title,
+        taskId: task.id,
+        audiences: Array.from(targets),
       });
     },
   });
@@ -315,24 +308,23 @@ export function useTaskActions() {
       if (!task?.assignee_id) return;
 
       let approvers: string[];
-      if (task.approved_by_id) {
-        approvers = [task.approved_by_id];
+      if (task.approver_ids && task.approver_ids.length > 0) {
+        approvers = task.approver_ids;
       } else {
         const assignee = allProfiles.find((p: any) => p.id === task.assignee_id);
         const dept = assignee?.department ?? '';
         approvers = getApproverIds(dept, visibilityMap, allProfiles);
       }
       
-      const targets = new Set([task.assignee_id, ...approvers]);
-      targets.forEach(audience => {
-        pushNotification({
-          type: 'completion_rejected',
-          actorId: user?.employeeId ?? '',
-          actorName: user?.name ?? 'Admin',
-          taskTitle: task.title,
-          taskId: task.id,
-          audience,
-        });
+      // Rejection doesn't strictly need to notify watchers, but keeping it consistent with approval
+      const targets = new Set([task.assignee_id, ...approvers].filter(Boolean) as string[]);
+      pushActivityAndNotify({
+        type: 'completion_rejected',
+        actorId: user?.employeeId ?? '',
+        actorName: user?.name ?? 'Admin',
+        taskTitle: task.title,
+        taskId: task.id,
+        audiences: Array.from(targets),
       });
     },
   });

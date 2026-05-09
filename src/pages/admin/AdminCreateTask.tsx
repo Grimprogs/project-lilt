@@ -58,12 +58,17 @@ export default function AdminCreateTask() {
   const [startDate, setStartDate] = useState<Date>(today);
   const [dueDate, setDueDate] = useState<Date>(inWeek);
   const [dueTime, setDueTime] = useState("17:00");
-  const [approverId, setApproverId] = useState("");
+  const [approverIds, setApproverIds] = useState<string[]>([]);
   const [openApprover, setOpenApprover] = useState(false);
+  const [visibleTo, setVisibleTo] = useState<string[]>([]);
+  const [openVisible, setOpenVisible] = useState(false);
 
-  // Self-task: auto-lock approver to self
+  // Self-task: ensure self is always an approver, but allow adding others
   const isSelfTask = assigneeId === profile?.id;
-  const effectiveApproverId = isSelfTask ? (profile?.id ?? "") : approverId;
+  const finalApproverIds = Array.from(new Set([
+    ...approverIds,
+    ...(isSelfTask ? [profile?.id ?? ""] : [])
+  ])).filter(Boolean);
 
 
   const submit = (e: React.FormEvent) => {
@@ -76,7 +81,9 @@ export default function AdminCreateTask() {
       priority,
       due_date: dueDate.toISOString().slice(0, 10),
       due_time: dueTime,
-      approved_by_id: effectiveApproverId || undefined,
+      approver_ids: finalApproverIds,
+      visible_to: visibleTo,
+      created_by: profile?.id,
     } as any);
     toast.success("Task created");
     navigate("/admin/tasks");
@@ -178,7 +185,7 @@ export default function AdminCreateTask() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={startDate} onSelect={d => d && setStartDate(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+                <Calendar mode="single" selected={startDate} onSelect={d => d && setStartDate(d)} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0))} initialFocus className={cn("p-3 pointer-events-auto")} />
               </PopoverContent>
             </Popover>
           </div>
@@ -192,7 +199,7 @@ export default function AdminCreateTask() {
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
-                <Calendar mode="single" selected={dueDate} onSelect={d => d && setDueDate(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+                <Calendar mode="single" selected={dueDate} onSelect={d => d && setDueDate(d)} disabled={(date) => date < new Date(new Date().setHours(0,0,0,0)) || date < new Date(new Date(startDate).setHours(0,0,0,0))} initialFocus className={cn("p-3 pointer-events-auto")} />
               </PopoverContent>
             </Popover>
           </div>
@@ -202,71 +209,126 @@ export default function AdminCreateTask() {
             <Input type="time" value={dueTime} onChange={e => setDueTime(e.target.value)} className="w-44" />
           </div>
 
-          {/* Approver picker */}
+          {/* Approver picker (Multi-select) */}
           <div className="space-y-1.5 sm:col-span-2">
             <Label className="flex items-center gap-1.5">
               <ShieldCheck className="h-4 w-4 text-primary" />
               Who can approve this task?
             </Label>
-            {isSelfTask ? (
-              <div className="flex items-center gap-2 h-10 px-3 rounded-md border bg-muted/50 text-sm text-muted-foreground">
-                <UserAvatar name={profile?.name ?? ""} color={profile?.avatar_color ?? undefined} size="sm" />
-                <span>{profile?.name} (self-task — auto-approved)</span>
-              </div>
-            ) : (
-              <Popover open={openApprover} onOpenChange={setOpenApprover}>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={openApprover}
-                    className="w-full justify-between font-normal"
-                  >
-                    {approverId
-                      ? (() => {
-                          const emp = employees.find((e) => e.id === approverId);
-                          return emp ? `${emp.name} · ${emp.job_title ?? "Employee"}` : "Select approver";
-                        })()
-                      : "Select approver (optional)"}
-                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="p-0" align="start">
-                  <Command>
-                    <CommandInput placeholder="Search approver..." />
-                    <CommandList>
-                      <CommandEmpty>No user found.</CommandEmpty>
-                      <CommandGroup>
-                        <CommandItem
-                          value="__none__"
-                          onSelect={() => { setApproverId(""); setOpenApprover(false); }}
-                          className="text-xs text-muted-foreground"
-                        >
-                          <Check className={cn("h-4 w-4 shrink-0", !approverId ? "opacity-100" : "opacity-0")} />
-                          No specific approver (use department managers)
-                        </CommandItem>
-                        {employees.map((e) => (
+            <Popover open={openApprover} onOpenChange={setOpenApprover}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={openApprover} className="w-full justify-between font-normal h-auto min-h-[40px] py-2">
+                  <div className="flex flex-wrap gap-1">
+                    {finalApproverIds.length > 0 ? (
+                      finalApproverIds.map(id => {
+                        const emp = employees.find(e => e.id === id);
+                        if (!emp) return null;
+                        return (
+                          <div key={id} className="flex items-center gap-1 bg-primary/10 text-primary px-2 py-0.5 rounded text-xs">
+                            {emp.name} {id === profile?.id && isSelfTask && "(Auto)"}
+                          </div>
+                        );
+                      })
+                    ) : "Select approvers (optional)"}
+                  </div>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search approver..." />
+                  <CommandList>
+                    <CommandEmpty>No user found.</CommandEmpty>
+                    <CommandGroup>
+                      {employees.map((e) => {
+                        const isSelected = finalApproverIds.includes(e.id);
+                        const isAutoSelected = isSelfTask && e.id === profile?.id;
+                        return (
                           <CommandItem
                             key={e.id}
                             value={`${e.name} ${e.username} ${e.job_title}`}
-                            onSelect={() => { setApproverId(e.id); setOpenApprover(false); }}
-                            className="flex items-center gap-2"
+                            onSelect={() => {
+                              if (isAutoSelected) return; // Can't unselect self if self-task
+                              setApproverIds(prev =>
+                                prev.includes(e.id) ? prev.filter(x => x !== e.id) : [...prev, e.id]
+                              );
+                            }}
+                            className={cn("flex items-center gap-2", isAutoSelected && "opacity-50 cursor-not-allowed")}
                           >
-                            <Check className={cn("h-4 w-4 shrink-0", approverId === e.id ? "opacity-100" : "opacity-0")} />
+                            <Check className={cn("h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
                             <UserAvatar name={e.name} color={e.avatar_color ?? undefined} size="sm" />
                             <div className="flex flex-col">
                               <span className="font-medium">{e.name}</span>
                               <span className="text-[10px] text-muted-foreground leading-none">{e.job_title ?? "Employee"}</span>
                             </div>
                           </CommandItem>
-                        ))}
-                      </CommandGroup>
-                    </CommandList>
-                  </Command>
-                </PopoverContent>
-              </Popover>
-            )}
-            <p className="text-[10px] text-muted-foreground">Choose who can approve when the assignee requests task completion. Leave blank to use default department managers.</p>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <p className="text-[10px] text-muted-foreground">Choose who can approve when the assignee requests completion. Leave blank to use default department managers.</p>
+          </div>
+
+          {/* Watchers (Visible To) picker (Multi-select) */}
+          <div className="space-y-1.5 sm:col-span-2">
+            <Label className="flex items-center gap-1.5">
+              Who else should see this task? (Watchers)
+            </Label>
+            <Popover open={openVisible} onOpenChange={setOpenVisible}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" role="combobox" aria-expanded={openVisible} className="w-full justify-between font-normal h-auto min-h-[40px] py-2">
+                  <div className="flex flex-wrap gap-1">
+                    {visibleTo.length > 0 ? (
+                      visibleTo.map(id => {
+                        const emp = employees.find(e => e.id === id);
+                        return emp ? (
+                          <div key={id} className="flex items-center gap-1 bg-muted text-foreground px-2 py-0.5 rounded text-xs">
+                            {emp.name}
+                          </div>
+                        ) : null;
+                      })
+                    ) : "Select watchers (optional)"}
+                  </div>
+                  <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="p-0" align="start">
+                <Command>
+                  <CommandInput placeholder="Search user..." />
+                  <CommandList>
+                    <CommandEmpty>No user found.</CommandEmpty>
+                    <CommandGroup>
+                      {employees.map((e) => {
+                        const isSelected = visibleTo.includes(e.id);
+                        return (
+                          <CommandItem
+                            key={e.id}
+                            value={`${e.name} ${e.username} ${e.job_title}`}
+                            onSelect={() => {
+                              setVisibleTo(prev =>
+                                prev.includes(e.id) ? prev.filter(x => x !== e.id) : [...prev, e.id]
+                              );
+                            }}
+                            className="flex items-center gap-2"
+                          >
+                            <Check className={cn("h-4 w-4 shrink-0", isSelected ? "opacity-100" : "opacity-0")} />
+                            <UserAvatar name={e.name} color={e.avatar_color ?? undefined} size="sm" />
+                            <div className="flex flex-col">
+                              <span className="font-medium">{e.name}</span>
+                              <span className="text-[10px] text-muted-foreground leading-none">{e.job_title ?? "Employee"}</span>
+                            </div>
+                          </CommandItem>
+                        );
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                </Command>
+              </PopoverContent>
+            </Popover>
+            <p className="text-[10px] text-muted-foreground">These users will be able to see the task and get notified on completion, but cannot approve it.</p>
           </div>
         </div>
 

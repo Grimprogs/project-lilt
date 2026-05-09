@@ -554,6 +554,58 @@ function AddPersonOverrideButton({ employees, departments, onAdd }: { employees:
   );
 }
 
+// ── Stable DeptPicker (extracted to avoid remount on parent re-render) ────────
+function DeptPicker({ title, selected, onToggle, disabled, triggerLabel, departments }: {
+  title: string; selected: string[]; onToggle: (d: string) => void; disabled?: boolean; triggerLabel?: string; departments: string[];
+}) {
+  const [open, setOpen] = useState(false);
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          type="button"
+          disabled={disabled}
+          className={cn(
+            "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
+            selected.length > 0 ? "border-primary/40 bg-primary/10 text-primary" : "border-muted text-muted-foreground",
+            disabled && "opacity-40 cursor-not-allowed"
+          )}
+        >
+          {selected.length > 0 ? `${selected.length}d` : (triggerLabel || "Depts")}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent className="w-48 p-3 z-[200]" side="right" onInteractOutside={(e) => e.preventDefault()}>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</div>
+            <button
+              type="button"
+              className="text-[10px] font-semibold text-primary hover:underline px-1"
+              onClick={() => setOpen(false)}
+            >
+              Done
+            </button>
+          </div>
+          <div className="grid gap-1 max-h-48 overflow-y-auto">
+            {departments.map(d => (
+              <label key={d} className="flex items-center justify-between gap-2 text-xs hover:bg-muted/40 px-1 rounded cursor-pointer">
+                <span className="truncate">{d}</span>
+                <input
+                  type="checkbox"
+                  disabled={disabled}
+                  checked={selected.includes(d)}
+                  onChange={() => onToggle(d)}
+                  className="h-3 w-3"
+                />
+              </label>
+            ))}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 function AccessMatrix({
   departments,
   value,
@@ -655,57 +707,8 @@ function AccessMatrix({
     </div>
   );
 
-  // Reusable dept picker popover used in multiple columns
-  const DeptPicker = ({ title, selected, onToggle, disabled, triggerLabel }: {
-    title: string; selected: string[]; onToggle: (d: string) => void; disabled?: boolean; triggerLabel?: string;
-  }) => {
-    const [open, setOpen] = useState(false);
-    return (
-      <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger asChild>
-          <button
-            type="button"
-            disabled={disabled}
-            className={cn(
-              "text-[10px] px-1.5 py-0.5 rounded border transition-colors",
-              selected.length > 0 ? "border-primary/40 bg-primary/10 text-primary" : "border-muted text-muted-foreground",
-              disabled && "opacity-40 cursor-not-allowed"
-            )}
-          >
-            {selected.length > 0 ? `${selected.length}d` : (triggerLabel || "Depts")}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-48 p-3 z-[200]" side="right" onInteractOutside={(e) => e.preventDefault()}>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <div className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{title}</div>
-              <button
-                type="button"
-                className="text-[10px] font-semibold text-primary hover:underline px-1"
-                onClick={() => setOpen(false)}
-              >
-                Done
-              </button>
-            </div>
-            <div className="grid gap-1 max-h-48 overflow-y-auto">
-              {departments.map(d => (
-                <label key={d} className="flex items-center justify-between gap-2 text-xs hover:bg-muted/40 px-1 rounded cursor-pointer">
-                  <span className="truncate">{d}</span>
-                  <input
-                    type="checkbox"
-                    disabled={disabled}
-                    checked={selected.includes(d)}
-                    onChange={() => onToggle(d)}
-                    className="h-3 w-3"
-                  />
-                </label>
-              ))}
-            </div>
-          </div>
-        </PopoverContent>
-      </Popover>
-    );
-  };
+  // DeptPicker is defined outside as StableDeptPicker to avoid remount
+  // (see component above AccessMatrix)
 
   // Separate person vs role keys for the role override tab
   const personKeys = type === 'role' ? filteredKeys.filter(k => k.startsWith('profile:')) : [];
@@ -732,6 +735,12 @@ function AccessMatrix({
       const cur = settings.assignable_depts || [];
       const next = cur.includes(dept) ? cur.filter(d => d !== dept) : [...cur, dept];
       onChange({ ...value, [key]: { ...settings, can_assign_tasks: next.length > 0, assignable_depts: next } });
+    };
+    const toggleApproveDept = (dept: string) => {
+      if (!canEdit) return;
+      const cur = settings.approvable_depts || [];
+      const next = cur.includes(dept) ? cur.filter(d => d !== dept) : [...cur, dept];
+      onChange({ ...value, [key]: { ...settings, approvable_depts: next } });
     };
     const toggleEditDept = (dept: string) => {
       if (!canEdit) return;
@@ -800,6 +809,7 @@ function AccessMatrix({
               selected={settings.viewable_profile_depts || []}
               onToggle={toggleProfileDept}
               disabled={!canEdit}
+              departments={departments}
             />
           </div>
         </td>
@@ -817,6 +827,19 @@ function AccessMatrix({
               selected={settings.assignable_depts || []}
               onToggle={toggleAssignDept}
               disabled={!canEdit}
+              departments={departments}
+            />
+          </div>
+        </td>
+        <td className="px-3 py-2.5 text-center align-middle">
+          <div className="flex flex-col items-center gap-1">
+            <DeptPicker
+              title="Approvable Departments"
+              selected={settings.approvable_depts || []}
+              onToggle={toggleApproveDept}
+              disabled={!canEdit}
+              departments={departments}
+              triggerLabel="Depts"
             />
           </div>
         </td>
@@ -835,6 +858,7 @@ function AccessMatrix({
               selected={settings.editable_depts || []}
               onToggle={toggleEditDept}
               disabled={!canEdit}
+              departments={departments}
             />
           </div>
         </td>
@@ -891,6 +915,7 @@ function AccessMatrix({
                 }}
                 disabled={!canEdit}
                 triggerLabel="Depts"
+                departments={departments}
               />
 
               {/* Job picker for creation */}
@@ -950,6 +975,7 @@ function AccessMatrix({
                 onChange({ ...value, [key]: { ...settings, can_delete_profiles: next.length > 0, deletable_depts: next } });
               }}
               disabled={!canEdit}
+              departments={departments}
             />
           </div>
         </td>
@@ -975,6 +1001,7 @@ function AccessMatrix({
             selected={settings.manages_depts || []}
             onToggle={toggleManagedDept}
             disabled={!isSuperAdmin}
+            departments={departments}
           />
         </td>
         <td className="px-3 py-2.5 text-center align-middle">
@@ -1001,6 +1028,7 @@ function AccessMatrix({
               <th className="px-3 py-2 text-center font-semibold w-14 border-b"><HeaderHelp label="Jobs?" help="Show job titles for visible people." /></th>
               <th className="px-3 py-2 text-center font-semibold w-20 border-b"><HeaderHelp label="Profiles?" help="Eye button visibility. Use Depts picker to restrict to specific departments." /></th>
               <th className="px-3 py-2 text-center font-semibold w-20 border-b"><HeaderHelp label="Assign?" help="Can assign tasks. Use Depts picker to set which depts." /></th>
+              <th className="px-3 py-2 text-center font-semibold w-20 border-b"><HeaderHelp label="Approve?" help="Can approve tasks for chosen depts. Select depts from the picker." /></th>
               <th className="px-3 py-2 text-center font-semibold w-20 border-b"><HeaderHelp label="Update?" help="Can edit existing profiles. Use Depts picker." /></th>
               <th className="px-3 py-2 text-center font-semibold w-20 border-b bg-green-500/5"><HeaderHelp label="Create?" help="Can create new users. Use Role picker to set max role allowed." /></th>
               <th className="px-3 py-2 text-center font-semibold w-20 border-b bg-red-500/5"><HeaderHelp label="Delete?" help="Can delete profiles. Use Depts picker." /></th>
@@ -1018,18 +1046,18 @@ function AccessMatrix({
               <>
                 {personKeys.length > 0 && (
                   <>
-                    <tr><td colSpan={14} className="px-3 pt-4 pb-1"><span className="text-[10px] font-bold uppercase tracking-wider text-violet-600">Person Overrides</span></td></tr>
+                    <tr><td colSpan={15} className="px-3 pt-4 pb-1"><span className="text-[10px] font-bold uppercase tracking-wider text-violet-600">Person Overrides</span></td></tr>
                     {personKeys.map(key => renderRow(key))}
                   </>
                 )}
                 {roleOnlyKeys.length > 0 && (
                   <>
-                    <tr><td colSpan={14} className="px-3 pt-4 pb-1"><span className="text-[10px] font-bold uppercase tracking-wider text-orange-600">Role Overrides</span></td></tr>
+                    <tr><td colSpan={15} className="px-3 pt-4 pb-1"><span className="text-[10px] font-bold uppercase tracking-wider text-orange-600">Role Overrides</span></td></tr>
                     {roleOnlyKeys.map(key => renderRow(key))}
                   </>
                 )}
                 {filteredKeys.length === 0 && (
-                  <tr><td colSpan={14} className="px-4 py-8 text-center text-muted-foreground italic text-xs">No overrides yet. Use the buttons above to add role or person overrides.</td></tr>
+                  <tr><td colSpan={15} className="px-4 py-8 text-center text-muted-foreground italic text-xs">No overrides yet. Use the buttons above to add role or person overrides.</td></tr>
                 )}
               </>
             )}

@@ -22,6 +22,8 @@ export type VisibilityMap = Record<string, {
   can_edit_self?: boolean; // can edit their own profile
   // Departments they are allowed to assign tasks to (optional more granular control)
   assignable_depts?: string[];
+  // Departments whose tasks they can approve (Task Enhancement v2)
+  approvable_depts?: string[];
   // Profile CREATE permission
   can_create_profiles?: boolean; // can add new employees
   creatable_roles?: ('employee' | 'admin')[]; // which roles they can create (default: employee only)

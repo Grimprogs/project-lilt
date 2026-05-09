@@ -54,8 +54,8 @@ export function TaskDetailDialog({
 
   // Self-assigned check: user created this task AND assigned it to themselves
   const isSelfAssigned = task.created_by === profile?.id && task.assignee_id === profile?.id;
-  // Can edit self-assigned tasks if they have can_assign_self permission
-  const canEditSelfTask = isSelfAssigned && canSelfAssign;
+  // Can edit self-assigned tasks if they are the creator and assignee
+  const canEditSelfTask = isSelfAssigned;
 
   const handleDelete = () => {
     toast(`Delete "${task.title}"?`, {
@@ -241,8 +241,8 @@ export function TaskDetailDialog({
             </Button>
           )}
 
-          {/* Delete — only full canManage */}
-          {canManage && (
+          {/* Delete — available if canManage OR self-assigned with can_assign_self */}
+          {(canManage || canEditSelfTask) && (
             <Button size="sm" variant="outline" className="h-9 gap-1.5 text-destructive border-destructive/30 hover:bg-destructive/10"
               onClick={handleDelete}>
               <Trash2 className="h-3.5 w-3.5" /> Delete

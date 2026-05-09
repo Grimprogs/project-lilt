@@ -27,7 +27,8 @@ export interface Task {
   status: TaskStatus;
   assignee_id: string | null;
   created_by: string | null;
-  approved_by_id: string | null;
+  approver_ids: string[];
+  visible_to: string[];
   due_date: string;    // ISO date
   due_time: string;    // HH:mm
   started_at: string | null;
@@ -38,9 +39,7 @@ export interface Task {
 
 export interface Notification {
   id: string;
-  /** Profile ID of the recipient (UUID) — null for broadcast */
   user_id: string | null;
-  /** Audience routing key: profile UUID or 'admin' for broadcast */
   audience: string | null;
   task_id: string | null;
   type: NotificationKind;
@@ -51,12 +50,34 @@ export interface Notification {
   actor_id: string | null;
 }
 
+export interface ActivityLog {
+  id: string;
+  type: string;
+  actor_id: string | null;
+  actor_name: string | null;
+  task_id: string | null;
+  task_title: string | null;
+  task_description: string | null;
+  metadata: Record<string, any>;
+  created_at: string;
+}
+
+export interface UserNotification {
+  id: string;
+  user_id: string;
+  activity_id: string;
+  read: boolean;
+  created_at: string;
+}
+
 export interface Database {
   public: {
     Tables: {
       profiles: { Row: Profile; Insert: Omit<Profile, 'created_at'>; Update: Partial<Profile> };
       tasks: { Row: Task; Insert: Omit<Task, 'id' | 'created_at'>; Update: Partial<Task> };
       notifications: { Row: Notification; Insert: Omit<Notification, 'id' | 'created_at'>; Update: Partial<Notification> };
+      activity_logs: { Row: ActivityLog; Insert: Omit<ActivityLog, 'id' | 'created_at'>; Update: Partial<ActivityLog> };
+      user_notifications: { Row: UserNotification; Insert: Omit<UserNotification, 'id' | 'created_at'>; Update: Partial<UserNotification> };
     };
   };
 }
